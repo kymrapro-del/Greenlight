@@ -1,0 +1,22 @@
+# Stack recommandée par le guide officiel du hackathon :
+# "We recommend building your agents natively using the Agent Development Kit (ADK)
+#  instead of external wrapper libraries"
+google-cloud-aiplatform[agent_engines,adk]>=1.101.0
+google-genai>=1.0.0
+
+# Partenaire — track Parallel
+parallel-web
+
+# Persistance / infra
+google-cloud-firestore>=2.19.0
+google-cloud-tasks>=2.16.0
+
+# API
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+python-dotenv>=1.0.1
+
+# Dev
+pytest>=8.3.0
+ruff>=0.7.0

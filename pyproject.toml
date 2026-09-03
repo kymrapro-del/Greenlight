@@ -1,0 +1,56 @@
+[project]
+name = "greenlight"
+version = "0.1.0"
+description = "Automated pre-clearance for screenplays. Catch legal risk while it is still free to fix."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { file = "LICENSE" }
+authors = [{ name = "Kymra_" }]
+keywords = ["screenplay", "clearance", "gemini", "adk", "parallel", "agent"]
+
+[project.urls]
+Homepage = "https://github.com/kymrapro-del/Greenlight"
+Repository = "https://github.com/kymrapro-del/Greenlight"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "backend" }
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["greenlight*"]
+
+# --------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # longueur gérée par le formateur
+    "B008",   # Depends() de FastAPI en valeur par défaut
+    # `class X(str, Enum)` est l'idiome pydantic de référence et sérialise de
+    # façon identique côté responseSchema Gemini. StrEnum n'apporte rien ici.
+    "UP042",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["greenlight"]
+
+# --------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-q --strict-markers"
+markers = [
+    "live: touche une API réelle et consomme des crédits (désélectionné par défaut)",
+]
+# Le mode replay est forcé dans backend/tests/conftest.py :
+# les tests tournent hors ligne, aucun crédit consommé en CI.

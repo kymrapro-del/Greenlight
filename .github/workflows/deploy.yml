@@ -1,0 +1,83 @@
+name: Deploy
+
+# main est la branche de production : tout push vert sur main déploie.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  SERVICE: gl-api
+  REGION: us-central1
+
+jobs:
+  deploy:
+    name: Cloud Run (production)
+    runs-on: ubuntu-latest
+    environment: production
+
+    # Ne déploie que si la CI est verte ET si le projet est configuré.
+    # Sans les variables de dépôt, le job est ignoré au lieu d'échouer en rouge.
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
+
+    permissions:
+      contents: read
+      id-token: write   # requis par Workload Identity Federation
+
+    steps:
+      - name: Check deployment is configured
+        id: guard
+        run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ] || [ -z "${{ vars.GCP_WIF_PROVIDER }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Déploiement non configuré (vars GCP_PROJECT_ID / GCP_WIF_PROVIDER absentes). Étape ignorée."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.configured == 'true'
+
+      # Authentification sans clé de service account : identité fédérée,
+      # jeton de courte durée. Aucun secret long terme dans le dépôt.
+      - id: auth
+        name: Authenticate to Google Cloud
+        if: steps.guard.outputs.configured == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: steps.guard.outputs.configured == 'true'
+
+      - name: Deploy to Cloud Run
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source=. \
+            --region="$REGION" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --allow-unauthenticated \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=$REGION,FIXTURE_MODE=live" \
+            --set-secrets="PARALLEL_API_KEY=parallel-api-key:latest" \
+            --min-instances=0 \
+            --max-instances=20 \
+            --quiet
+
+      - name: Report deployed URL
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region="$REGION" \
+                --project="${{ vars.GCP_PROJECT_ID }}" --format='value(status.url)')
+          echo "### 🟢 Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"
