@@ -1,122 +1,154 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useMemo, useState } from 'react';
+import '@material/web/chips/chip-set.js';
+import '@material/web/chips/filter-chip.js';
+import '@material/web/progress/circular-progress.js';
 
-function App() {
-  const [count, setCount] = useState(0)
+import { FindingDetail } from './components/FindingDetail';
+import { Icon } from './components/Icon';
+import { FindingList } from './components/FindingList';
+import { VERDICTS, VERDICT_STYLES, type Verdict } from './theme/verdicts';
+import type { Report } from './types';
+
+/**
+ * Écran Rapport — l'écran principal, en layout list-detail.
+ *
+ * Le rapport est pré-calculé et chargé d'emblée : personne n'arrive sur un
+ * formulaire vide. La première entité à traiter est sélectionnée
+ * automatiquement, pour qu'on voie un verdict complet dès la première seconde.
+ */
+export default function App() {
+  const [report, setReport] = useState<Report | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [active, setActive] = useState<Set<Verdict>>(new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('demo-report.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data: Report) => {
+        setReport(data);
+        // Le rapport est déjà trié par sévérité : la première ligne est celle
+        // qui bloque le tournage.
+        setSelectedId(data.findings[0]?.id ?? null);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, []);
+
+  const counts = useMemo(() => {
+    const out = Object.fromEntries(VERDICTS.map((v) => [v, 0])) as Record<Verdict, number>;
+    for (const f of report?.findings ?? []) out[f.verdict as Verdict] += 1;
+    return out;
+  }, [report]);
+
+  /**
+   * Le rapport arrive déjà trié : sévérité, puis constats sourcés avant entités
+   * tranchées par règle. Cette règle appartient au backend, qui seul connaît la
+   * sévérité relative des verdicts — la redériver ici créerait deux ordres
+   * concurrents, et c'est précisément ce qui a fait divergier la liste du
+   * détail. On filtre, on ne retrie pas.
+   */
+  const visible = useMemo(() => {
+    const findings = report?.findings ?? [];
+    return active.size === 0
+      ? findings
+      : findings.filter((f) => active.has(f.verdict as Verdict));
+  }, [report, active]);
+
+  const selected = visible.find((f) => f.id === selectedId) ?? visible[0] ?? null;
+
+  const toggle = (verdict: Verdict) => {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(verdict)) next.delete(verdict);
+      else next.add(verdict);
+      return next;
+    });
+  };
+
+  if (error) {
+    return (
+      <main className="gl-state">
+        <h1 className="gl-headline-small">Rapport indisponible</h1>
+        <p className="gl-body-medium">{error}</p>
+      </main>
+    );
+  }
+
+  if (!report) {
+    return (
+      <main className="gl-state">
+        <md-circular-progress indeterminate aria-label="Chargement du rapport" />
+      </main>
+    );
+  }
+
+  const { stats } = report;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="gl-app">
+      {/* Top app bar — @material/web ne la livre pas, elle est bâtie sur les tokens. */}
+      <header className="gl-topbar">
+        <div className="gl-topbar-identity">
+          <span className="gl-mark" aria-hidden="true" />
+          <div>
+            <h1 className="gl-title-large">GREENLIGHT</h1>
+            <p className="gl-body-small gl-topbar-sub">
+              {report.title} · {report.sceneCount} scènes · pré-clearance
+            </p>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        <dl className="gl-metrics">
+          <Metric value={stats.entities} label="entités" />
+          <Metric value={stats.flagged} label="à traiter" accent />
+          <Metric value={stats.resolvedByRule} label="sans recherche" />
+          <Metric value={stats.escalated} label="verdicts remontés" />
+        </dl>
+      </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {report.placeholder && (
+        <p className="gl-banner gl-body-small" role="status">
+          <Icon name="science" />
+          Données de démonstration : ce rapport vient du harnais de test hors ligne. Les verdicts
+          et les sources seront ceux d’un vrai passage une fois les fixtures enregistrées.
+        </p>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <main className="gl-panes">
+        <section className="gl-pane gl-pane-list" aria-label="Liste des entités">
+          <md-chip-set class="gl-filters" aria-label="Filtrer par verdict">
+            {VERDICTS.filter((v) => counts[v] > 0).map((verdict) => (
+              <md-filter-chip
+                key={verdict}
+                label={`${VERDICT_STYLES[verdict].label} (${counts[verdict]})`}
+                selected={active.has(verdict) || undefined}
+                onClick={() => toggle(verdict)}
+              />
+            ))}
+          </md-chip-set>
+
+          <FindingList findings={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
+        </section>
+
+        <section className="gl-pane gl-pane-detail" aria-label="Détail du verdict">
+          <FindingDetail finding={selected} />
+        </section>
+      </main>
+
+      <footer className="gl-footer gl-body-small">
+        Triage en amont, pas un avis juridique. GREENLIGHT ne remplace pas le rapport de clearance
+        exigé par l’assureur E&amp;O : il attrape les problèmes pendant l’écriture, quand les
+        corriger est encore gratuit.
+      </footer>
+    </div>
+  );
 }
 
-export default App
+function Metric({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
+  return (
+    <div className={`gl-metric ${accent ? 'is-accent' : ''}`}>
+      <dt className="gl-headline-medium">{value}</dt>
+      <dd className="gl-label-medium">{label}</dd>
+    </div>
+  );
+}

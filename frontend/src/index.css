@@ -1,111 +1,425 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/**
+ * Mise en page de l'écran Rapport.
+ *
+ * Aucune valeur de couleur, de rayon, de durée ni de taille de texte n'apparaît
+ * ici en dur : tout passe par les tokens M3. Changer la couleur source de
+ * l'application recolore l'écran entier sans toucher ce fichier.
+ */
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@import './theme/generated-color.css';
+@import './theme/shape.css';
+@import './theme/motion.css';
+@import './theme/typography.css';
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-plain);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Les icônes sont des SVG inline : rien à charger, donc rien à rater. */
+.gl-icon {
+  flex: none;
+  vertical-align: -0.22em;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+/* --- Ossature ---------------------------------------------------------- */
+
+.gl-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+
+.gl-state {
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  min-height: 100vh;
+  text-align: center;
 }
-p {
+
+/* --- Top app bar ------------------------------------------------------- */
+
+.gl-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 24px;
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.gl-topbar-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gl-topbar h1 {
+  margin: 0;
+  letter-spacing: 0.08em;
+}
+
+.gl-topbar-sub {
+  margin: 2px 0 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Le feu vert : la marque tient dans un seul objet, à la couleur primaire. */
+.gl-mark {
+  width: 14px;
+  height: 34px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+}
+
+.gl-metrics {
+  display: flex;
+  gap: 28px;
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.gl-metric dt,
+.gl-metric dd {
+  margin: 0;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.gl-metric dd {
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: lowercase;
+}
+
+.gl-metric.is-accent dt {
+  color: var(--md-sys-color-error);
+}
+
+/* --- Bandeau de cadrage ------------------------------------------------ */
+
+/* Signalé sans dominer : c'est une note de cadrage, pas une alerte. */
+.gl-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 24px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: inset 3px 0 0 var(--md-sys-color-warning);
+}
+
+/* --- List-detail ------------------------------------------------------- */
+
+.gl-panes {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) 1fr;
+  gap: 16px;
+  flex: 1;
+  align-items: start;
+  padding: 16px;
+}
+
+.gl-pane {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--gl-shape-pane);
+  padding: 12px;
+}
+
+.gl-pane-detail {
+  position: sticky;
+  top: 16px;
+  min-height: 60vh;
+}
+
+.gl-filters {
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* --- Liste ------------------------------------------------------------- */
+
+.gl-finding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gl-finding-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px 10px 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-radius var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+}
+
+.gl-finding-row:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.gl-finding-row[data-selected='true'] {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.gl-finding-row:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: -3px;
+}
+
+/* La barre de sévérité : le rapport se lit au balayage. */
+.gl-finding-rail {
+  flex: 0 0 6px;
+  align-self: stretch;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.gl-finding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gl-finding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gl-finding-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gl-finding-meta {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-finding-row[data-selected='true'] .gl-finding-meta {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.gl-empty {
+  padding: 24px 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* --- Puce de verdict --------------------------------------------------- */
+
+.gl-verdict-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--gl-shape-pill);
+  white-space: nowrap;
+}
+
+/* --- Détail ------------------------------------------------------------ */
+
+.gl-detail {
+  padding: 12px 16px 24px;
+}
+
+.gl-detail-empty {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  min-height: 50vh;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-detail-empty .gl-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  opacity: 0.5;
+}
+
+.gl-detail-title {
+  margin: 12px 0 2px;
+}
+
+.gl-detail-sub {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-detail-action {
+  margin: 20px 0 0;
+  padding: 14px 18px;
+  border-radius: var(--gl-shape-finding-card);
+}
+
+.gl-detail-section {
+  margin-top: 26px;
+}
+
+.gl-detail-legend {
+  margin: 0 0 8px;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gl-detail-section p {
+  margin: 0;
+}
+
+.gl-detail-muted {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* La trace du raisonnement : mise en avant, pas cachée dans un tooltip. */
+.gl-detail-escalation,
+.gl-detail-rule {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--gl-shape-finding-card);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-detail-escalation {
+  border-left: 3px solid var(--md-sys-color-error);
+}
+
+.gl-detail-rule {
+  border-left: 3px solid var(--md-sys-color-tertiary);
+}
+
+/* --- Remplacement ------------------------------------------------------ */
+
+.gl-replacement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--gl-shape-finding-card);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.gl-replacement code {
+  font-family: var(--gl-typeface-screenplay);
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-surface);
+}
+
+.gl-replacement-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gl-replacement-mark.is-verified {
+  color: var(--md-sys-color-primary);
+}
+
+.gl-replacement-mark.is-unverified {
+  color: var(--md-sys-color-on-warning-container);
+}
+
+/* --- Sources ----------------------------------------------------------- */
+
+.gl-citations,
+.gl-occurrences {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gl-citation-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--md-sys-color-primary);
+  text-decoration: none;
+}
+
+.gl-citation-link:hover {
+  text-decoration: underline;
+}
+
+.gl-citation-excerpt {
+  margin: 4px 0 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-occurrences li {
+  padding-left: 12px;
+  border-left: 2px solid var(--md-sys-color-outline-variant);
+}
+
+.gl-occurrence-scene {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Le scénario s'affiche en Courier. Ailleurs, ce serait faux. */
+.gl-occurrence-quote {
+  margin: 4px 0;
+  font-family: var(--gl-typeface-screenplay);
+  font-size: 0.875rem;
+}
+
+/* --- Pied de page ------------------------------------------------------ */
+
+.gl-footer {
+  padding: 18px 24px 28px;
+  color: var(--md-sys-color-on-surface-variant);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  max-width: 78ch;
+}
+
+/* --- Adaptatif : les classes de largeur M3 ------------------------------ */
+
+/* Sous 840 px (Compact et Medium), le list-detail se replie en un seul volet
+   empilé : la liste au-dessus, le détail dessous. */
+@media (max-width: 839px) {
+  .gl-panes {
+    grid-template-columns: 1fr;
+  }
+
+  .gl-pane-detail {
+    position: static;
+    min-height: 0;
+  }
+
+  .gl-metrics {
+    gap: 18px;
+  }
 }

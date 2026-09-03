@@ -1,0 +1,521 @@
+{
+  "placeholder": true,
+  "title": "SEVENTEEN MINUTES",
+  "draftId": "draft-1",
+  "sceneCount": 6,
+  "stats": {
+    "entities": 15,
+    "flagged": 10,
+    "resolvedByRule": 5,
+    "servedFromCache": 0,
+    "billedSearches": 10,
+    "droppedHallucinations": 6,
+    "escalated": 3,
+    "elapsedS": 0.01
+  },
+  "usage": {
+    "search": {
+      "requests": 0,
+      "cost_usd": 0.0,
+      "fixture_mode": "replay"
+    },
+    "gemini": {
+      "calls": 22,
+      "prompt_tokens": 19800,
+      "output_tokens": 3080,
+      "fixture_mode": "live"
+    }
+  },
+  "findings": [
+    {
+      "id": "draft-1:business:black-cat-tavern",
+      "entityId": "business:black-cat-tavern",
+      "name": "The Black Cat Tavern",
+      "type": "BUSINESS",
+      "aliases": [],
+      "verdict": "CHANGE_RECOMMENDED",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent The Black Cat Tavern.",
+      "contextTier": "illegal",
+      "escalatedFrom": "CAUTION",
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        1,
+        5
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s1",
+          "sceneNumber": 1,
+          "contextTier": "illegal",
+          "quote": "The Black Cat Tavern"
+        },
+        {
+          "sceneId": "draft-1-s5",
+          "sceneNumber": 5,
+          "contextTier": "illegal",
+          "quote": "The Black Cat Tavern"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/the-black-cat-tavern-company",
+          "title": "Source for \"The Black Cat Tavern\" company",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:character_name:marcus-webb",
+      "entityId": "character_name:marcus-webb",
+      "name": "Marcus Webb",
+      "type": "CHARACTER_NAME",
+      "aliases": [],
+      "verdict": "CHANGE_RECOMMENDED",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Marcus Webb.",
+      "contextTier": "illegal",
+      "escalatedFrom": "CAUTION",
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        1
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s1",
+          "sceneNumber": 1,
+          "contextTier": "illegal",
+          "quote": "Marcus Webb"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/marcus-webb-marcus-webb",
+          "title": "Source for \"Marcus Webb\" Marcus Webb",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:institution:mercy-general-hospital",
+      "entityId": "institution:mercy-general-hospital",
+      "name": "Mercy General Hospital",
+      "type": "INSTITUTION",
+      "aliases": [],
+      "verdict": "CHANGE_RECOMMENDED",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Mercy General Hospital.",
+      "contextTier": "illegal",
+      "escalatedFrom": "CAUTION",
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        2
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s2",
+          "sceneNumber": 2,
+          "contextTier": "illegal",
+          "quote": "Mercy General Hospital"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/mercy-general-hospital-institution-mercy-general-hospital",
+          "title": "Source for \"Mercy General Hospital\" institution Mercy General Hospital",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:phone:312-555-8890",
+      "entityId": "phone:312-555-8890",
+      "name": "312-555-8890",
+      "type": "PHONE",
+      "aliases": [],
+      "verdict": "CHANGE_RECOMMENDED",
+      "confidence": 1.0,
+      "rationale": "Numéro hors de la plage fictive 555-01XX : il peut correspondre à une ligne réellement attribuée. Remplacer par un 555-01XX.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": null,
+      "resolvedByRule": true,
+      "suggestedReplacement": "312-555-0190",
+      "replacementVerified": true,
+      "scenes": [
+        3
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s3",
+          "sceneNumber": 3,
+          "contextTier": "neutral",
+          "quote": "312-555-8890"
+        }
+      ],
+      "citations": []
+    },
+    {
+      "id": "draft-1:artwork:nighthawks",
+      "entityId": "artwork:nighthawks",
+      "name": "Nighthawks",
+      "type": "ARTWORK",
+      "aliases": [],
+      "verdict": "LICENSE_REQUIRED",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Nighthawks.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        4
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s4",
+          "sceneNumber": 4,
+          "contextTier": "neutral",
+          "quote": "Nighthawks"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/nighthawks-artist-copyright",
+          "title": "Source for \"Nighthawks\" artist copyright",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:song:sweet-child-o-mine",
+      "entityId": "song:sweet-child-o-mine",
+      "name": "Sweet Child O' Mine",
+      "type": "SONG",
+      "aliases": [],
+      "verdict": "LICENSE_REQUIRED",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Sweet Child O' Mine.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        5
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s5",
+          "sceneNumber": 5,
+          "contextTier": "neutral",
+          "quote": "Sweet Child O' Mine"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/sweet-child-o-mine-song-publisher-rights",
+          "title": "Source for \"Sweet Child O' Mine\" song publisher rights",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:address:4400-north-broadway",
+      "entityId": "address:4400-north-broadway",
+      "name": "4400 North Broadway",
+      "type": "ADDRESS",
+      "aliases": [],
+      "verdict": "CAUTION",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent 4400 North Broadway.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "fast",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        6
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s6",
+          "sceneNumber": 6,
+          "contextTier": "neutral",
+          "quote": "4400 North Broadway"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/4400-north-broadway-address",
+          "title": "Source for \"4400 North Broadway\" address",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:character_name:daniel-reyes",
+      "entityId": "character_name:daniel-reyes",
+      "name": "Daniel Reyes",
+      "type": "CHARACTER_NAME",
+      "aliases": [],
+      "verdict": "CAUTION",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Daniel Reyes.",
+      "contextTier": "illegal",
+      "escalatedFrom": null,
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        1
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s1",
+          "sceneNumber": 1,
+          "contextTier": "illegal",
+          "quote": "Daniel Reyes"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/daniel-reyes-daniel-reyes",
+          "title": "Source for \"Daniel Reyes\" Daniel Reyes",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:license_plate:7xkd429",
+      "entityId": "license_plate:7xkd429",
+      "name": "7XKD429",
+      "type": "LICENSE_PLATE",
+      "aliases": [],
+      "verdict": "CAUTION",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent 7XKD429.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "fast",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        3
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s3",
+          "sceneNumber": 3,
+          "contextTier": "neutral",
+          "quote": "7XKD429"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/7xkd429-registration",
+          "title": "Source for \"7XKD429\" registration",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:publication:chicago-tribune",
+      "entityId": "publication:chicago-tribune",
+      "name": "Chicago Tribune",
+      "type": "PUBLICATION",
+      "aliases": [],
+      "verdict": "CAUTION",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Chicago Tribune.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "advanced",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        5
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s5",
+          "sceneNumber": 5,
+          "contextTier": "neutral",
+          "quote": "Chicago Tribune"
+        }
+      ],
+      "citations": [
+        {
+          "url": "https://sources.test/chicago-tribune-publisher",
+          "title": "Source for \"Chicago Tribune\" publisher",
+          "excerpt": "Extrait rapporté par la recherche.",
+          "publishDate": null
+        }
+      ]
+    },
+    {
+      "id": "draft-1:government_agency:cpd",
+      "entityId": "government_agency:cpd",
+      "name": "CPD",
+      "type": "GOVERNMENT_AGENCY",
+      "aliases": [],
+      "verdict": "CLEAR",
+      "confidence": 1.0,
+      "rationale": "Organisme public cité de façon neutre : l'usage nominatif d'une administration ne demande pas d'autorisation.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": null,
+      "resolvedByRule": true,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        6
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s6",
+          "sceneNumber": 6,
+          "contextTier": "neutral",
+          "quote": "CPD"
+        }
+      ],
+      "citations": []
+    },
+    {
+      "id": "draft-1:government_agency:fda",
+      "entityId": "government_agency:fda",
+      "name": "FDA",
+      "type": "GOVERNMENT_AGENCY",
+      "aliases": [],
+      "verdict": "CLEAR",
+      "confidence": 1.0,
+      "rationale": "Organisme public cité de façon neutre : l'usage nominatif d'une administration ne demande pas d'autorisation.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": null,
+      "resolvedByRule": true,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        1
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s1",
+          "sceneNumber": 1,
+          "contextTier": "neutral",
+          "quote": "FDA"
+        }
+      ],
+      "citations": []
+    },
+    {
+      "id": "draft-1:phone:555-0147",
+      "entityId": "phone:555-0147",
+      "name": "555-0147",
+      "type": "PHONE",
+      "aliases": [],
+      "verdict": "CLEAR",
+      "confidence": 1.0,
+      "rationale": "Numéro dans la plage 555-0100/555-0199, réservée à la fiction par le plan de numérotation nord-américain. Aucun risque.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": null,
+      "resolvedByRule": true,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        3
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s3",
+          "sceneNumber": 3,
+          "contextTier": "neutral",
+          "quote": "555-0147"
+        }
+      ],
+      "citations": []
+    },
+    {
+      "id": "draft-1:url_email:dreyes-example-com",
+      "entityId": "url_email:dreyes-example-com",
+      "name": "dreyes@example.com",
+      "type": "URL_EMAIL",
+      "aliases": [],
+      "verdict": "CLEAR",
+      "confidence": 1.0,
+      "rationale": "Domaine réservé à la documentation par la RFC 2606. Aucun risque.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": null,
+      "resolvedByRule": true,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        4
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s4",
+          "sceneNumber": 4,
+          "contextTier": "neutral",
+          "quote": "dreyes@example.com"
+        }
+      ],
+      "citations": []
+    },
+    {
+      "id": "draft-1:product_brand:coca-cola",
+      "entityId": "product_brand:coca-cola",
+      "name": "Coca-Cola",
+      "type": "PRODUCT_BRAND",
+      "aliases": [],
+      "verdict": "CLEAR",
+      "confidence": 0.85,
+      "rationale": "Les sources décrivent Coca-Cola.",
+      "contextTier": "neutral",
+      "escalatedFrom": null,
+      "searchMode": "fast",
+      "resolvedByRule": false,
+      "suggestedReplacement": null,
+      "replacementVerified": false,
+      "scenes": [
+        4
+      ],
+      "occurrences": [
+        {
+          "sceneId": "draft-1-s4",
+          "sceneNumber": 4,
+          "contextTier": "neutral",
+          "quote": "Coca-Cola"
+        }
+      ],
+      "citations": []
+    }
+  ]
+}

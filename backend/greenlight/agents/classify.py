@@ -290,4 +290,15 @@ _SEVERITY = {
 
 
 def sort_findings(findings: list[Finding]) -> list[Finding]:
-    return sorted(findings, key=lambda f: (_SEVERITY[f.verdict], -f.confidence, f.entity_id))
+    """Trie le rapport tel qu'il doit être lu.
+
+    Sévérité d'abord, évidemment. Mais à sévérité égale, un constat appuyé sur
+    des sources passe avant une entité tranchée par règle : les deux sont « à
+    changer », seul le premier demande un arbitrage. Sans ce départage, un
+    numéro de téléphone corrigé par convention — confiance 1,0 — ouvrirait le
+    rapport devant l'entité réellement risquée.
+    """
+    return sorted(
+        findings,
+        key=lambda f: (_SEVERITY[f.verdict], 0 if f.citations else 1, -f.confidence, f.entity_id),
+    )
