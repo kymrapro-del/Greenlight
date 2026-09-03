@@ -33,6 +33,7 @@ from greenlight.agents.replace import suggest_replacements
 from greenlight.agents.research import ResearchRun, research
 from greenlight.ingest.fountain import parse_file
 from greenlight.models import Draft, Entity, Finding, Verdict
+from greenlight.tools.entity_cache import EntityCache
 from greenlight.tools.parallel_search import ParallelSearch
 from greenlight.tools.queries import build_search, choose_mode, pre_verdict
 
@@ -119,6 +120,7 @@ def run_clearance(
     max_workers: int = 8,
     suggest: bool = False,
     previous: ClearanceRun | None = None,
+    cache: EntityCache | None = None,
 ) -> ClearanceRun:
     """Passe de clearance sur un scénario.
 
@@ -140,7 +142,7 @@ def run_clearance(
     else:
         draft_diff, targets, reused = None, extraction.entities, []
 
-    research_run = research(targets, search, max_workers=max_workers)
+    research_run = research(targets, search, max_workers=max_workers, cache=cache)
     findings = classify(research_run.results, client, draft_id=draft_id)
 
     if suggest:
@@ -216,6 +218,14 @@ def clearance_report(run: ClearanceRun) -> str:
     lines += [
         "",
         f"Recherche    : {run.search_usage}",
+        *(
+            [
+                f"Cache        : {run.research.cache} — "
+                f"{len(run.research.served_from_cache)} entités servies sans recherche"
+            ]
+            if run.research.cache
+            else []
+        ),
         f"Gemini (tout): {run.gemini_usage}",
         f"Durée totale : {run.elapsed_s} s",
     ]

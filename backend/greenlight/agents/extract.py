@@ -23,6 +23,7 @@ pour un nom que le scénariste n'a jamais écrit.
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from greenlight.agents.gemini import GeminiClient
@@ -140,14 +141,30 @@ def extract_scene(scene: Scene, client: GeminiClient, model: str | None = None) 
 
 
 def extract_draft(
-    draft: Draft, client: GeminiClient | None = None, model: str | None = None
+    draft: Draft,
+    client: GeminiClient | None = None,
+    model: str | None = None,
+    max_workers: int = 8,
 ) -> list[SceneEntities]:
-    """Extrait tout un draft. Une scène en échec n'emporte pas le rapport."""
+    """Extrait tout un draft. Une scène en échec n'emporte pas le rapport.
+
+    Les scènes sont indépendantes, donc traitées en parallèle. Ce n'est pas une
+    micro-optimisation : un long métrage fait une centaine de scènes, et les
+    enchaîner en série mettrait plusieurs minutes avant même que la première
+    recherche ne parte. C'est le vrai goulot de bout en bout, le fan-out en aval
+    n'y change rien.
+    """
     client = client or GeminiClient()
-    out: list[SceneEntities] = []
-    for scene in draft.scenes:
+
+    def one(scene: Scene) -> SceneEntities:
         try:
-            out.append(extract_scene(scene, client, model=model))
+            return extract_scene(scene, client, model=model)
         except Exception as exc:
-            out.append(SceneEntities(scene=scene, error=f"{type(exc).__name__}: {exc}"))
-    return out
+            return SceneEntities(scene=scene, error=f"{type(exc).__name__}: {exc}")
+
+    if max_workers <= 1 or len(draft.scenes) <= 1:
+        return [one(scene) for scene in draft.scenes]
+
+    # `map` préserve l'ordre d'entrée : les scènes restent dans l'ordre du script.
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        return list(pool.map(one, draft.scenes))

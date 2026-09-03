@@ -38,3 +38,7 @@ Thumbs.db
 # Sorties locales
 out/
 *.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

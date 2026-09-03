@@ -1,0 +1,69 @@
+/**
+ * Échelle de formes M3 — les dix crans.
+ *
+ * Les sept premiers sont ceux qu'émet `@material/web` (v0_192). Les trois
+ * suivants — 20, 32 et 48 px — appartiennent à l'échelle élargie de M3
+ * Expressive, que la librairie n'implémente pas : elle est en maintenance mode
+ * et la demande de support Expressive est toujours ouverte. On les déclare donc
+ * ici, aux valeurs de la spec, plutôt que d'écrire des rayons en dur dans les
+ * composants.
+ *
+ * Règle d'application, et elle vaut plus que les valeurs elles-mêmes : le rayon
+ * porte la hiérarchie. Plus un élément est grand et contenant, plus son rayon
+ * est large. Un conteneur n'est jamais moins arrondi que ce qu'il contient —
+ * sinon le regard lit deux systèmes au lieu d'un.
+ */
+
+:root {
+  /* Les sept crans de base, alignés sur les tokens de @material/web. */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* Les trois crans ajoutés par M3 Expressive. */
+  --md-sys-shape-corner-large-increased: 20px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-extra-extra-large: 48px;
+
+  /*
+   * Affectations GREENLIGHT : elles disent où va chaque cran, pour que personne
+   * n'en choisisse un au jugé devant un composant.
+   */
+  --gl-shape-chip: var(--md-sys-shape-corner-small);
+  --gl-shape-finding-card: var(--md-sys-shape-corner-medium);
+  --gl-shape-pane: var(--md-sys-shape-corner-large);
+  --gl-shape-dialog: var(--md-sys-shape-corner-extra-large);
+  --gl-shape-hero: var(--md-sys-shape-corner-extra-large-increased);
+  --gl-shape-pill: var(--md-sys-shape-corner-full);
+}
+
+/**
+ * Morphing de forme — l'apport principal d'Expressive sur les formes.
+ *
+ * Un changement d'état ne se signale pas que par la couleur : le rayon bouge.
+ * Une carte de finding sélectionnée s'arrondit franchement, ce qui donne un
+ * retour immédiat et lisible y compris pour quelqu'un qui distingue mal les
+ * teintes. Le mouvement passe par les tokens de motion M3, jamais par une durée
+ * arbitraire.
+ */
+.gl-shape-morph {
+  border-radius: var(--gl-shape-finding-card);
+  transition: border-radius var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-emphasized);
+}
+
+.gl-shape-morph[aria-selected='true'],
+.gl-shape-morph[data-selected='true'] {
+  border-radius: var(--gl-shape-hero);
+}
+
+/* Une préférence de mouvement réduit désactive le morphing, pas la sélection. */
+@media (prefers-reduced-motion: reduce) {
+  .gl-shape-morph {
+    transition: none;
+  }
+}
