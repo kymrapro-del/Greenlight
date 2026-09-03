@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from typing import Any
 
 from greenlight.agents.gemini import GeminiClient
 from greenlight.models import ContextTier, EntityType, Verdict
-from greenlight.pipeline import report, run_extraction
+from greenlight.pipeline import clearance_report, report, run_clearance, run_extraction
+from greenlight.tools.parallel_search import ParallelSearch, SearchResponse, SearchResult
 from greenlight.tools.queries import choose_mode, pre_verdict
 
 # Ce que le modèle est censé rendre sur ce scénario, d'après samples/EXPECTED.md.
@@ -121,3 +123,188 @@ def test_report_states_measured_numbers(sample_script):
     assert str(len(run.draft.scenes)) in text
     # Aucun prix Gemini renseigné : le compte-rendu parle en tokens, pas en dollars.
     assert "cost_usd" not in text
+
+
+# --------------------------------------------------------------------------
+# Phases 1 → 5 : la passe complète, confrontée à samples/EXPECTED.md
+# --------------------------------------------------------------------------
+
+# Ce que le modèle de classification est censé rendre entité par entité, en ne
+# lisant que les sources. `identifiable` est le signal qui autorise la règle de
+# dépiction à faire monter le verdict — c'est lui qui sépare « Marcus Webb,
+# médecin réel identifiable, qui deale » de « Daniel Reyes, nom banal ».
+RAW_CLASSIFICATIONS: dict[str, tuple[str, bool]] = {
+    "The Black Cat Tavern": ("CAUTION", True),
+    "Marcus Webb": ("CAUTION", True),
+    "Mercy General Hospital": ("CAUTION", True),
+    "Sweet Child O' Mine": ("LICENSE_REQUIRED", True),
+    "Nighthawks": ("LICENSE_REQUIRED", True),
+    "Chicago Tribune": ("CAUTION", True),
+    "7XKD429": ("CAUTION", False),
+    "4400 North Broadway": ("CAUTION", True),
+    "Daniel Reyes": ("CAUTION", False),
+    "Coca-Cola": ("CLEAR", True),
+}
+
+# La table de samples/EXPECTED.md, vérifiée à la main. Quand le pipeline s'en
+# écarte, c'est le pipeline qui a tort.
+EXPECTED_VERDICTS: dict[str, Verdict] = {
+    "The Black Cat Tavern": Verdict.CHANGE_RECOMMENDED,
+    "Marcus Webb": Verdict.CHANGE_RECOMMENDED,
+    "Mercy General Hospital": Verdict.CHANGE_RECOMMENDED,
+    "312-555-8890": Verdict.CHANGE_RECOMMENDED,
+    "555-0147": Verdict.CLEAR,
+    "Sweet Child O' Mine": Verdict.LICENSE_REQUIRED,
+    "Nighthawks": Verdict.LICENSE_REQUIRED,
+    "Chicago Tribune": Verdict.CAUTION,
+    "7XKD429": Verdict.CAUTION,
+    "4400 North Broadway": Verdict.CAUTION,
+    "Daniel Reyes": Verdict.CAUTION,
+    "CPD": Verdict.CLEAR,
+    "Coca-Cola": Verdict.CLEAR,
+    "dreyes@example.com": Verdict.CLEAR,
+    "FDA": Verdict.CLEAR,
+}
+
+
+class ScriptedSearch(ParallelSearch):
+    """Rend une source plausible et traçable par entité recherchée."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.performed: list[str] = []
+        self._performed_lock = threading.Lock()
+
+    def search(self, objective, search_queries, mode=None):  # type: ignore[override]
+        with self._performed_lock:
+            self.performed.append(search_queries[0])
+        slug = re.sub(r"[^a-z0-9]+", "-", search_queries[0].lower()).strip("-")
+        return SearchResponse(
+            search_id="scripted",
+            results=[
+                SearchResult(
+                    url=f"https://sources.test/{slug}",
+                    title=f"Source for {search_queries[0]}",
+                    excerpts=["Extrait rapporté par la recherche."],
+                )
+            ],
+            mode=mode or "fast",
+        )
+
+
+def _classification_for(prompt: str) -> dict[str, Any]:
+    name = prompt.split("ENTITY: ", 1)[1].split("\n", 1)[0].strip()
+    verdict, identifiable = RAW_CLASSIFICATIONS.get(name, ("UNRESOLVED", False))
+    urls = re.findall(r"https://\S+", prompt)
+    return {
+        "verdict": verdict,
+        "confidence": 0.85,
+        "rationale": f"Les sources décrivent {name}.",
+        # Seules des URL réellement présentes dans les résultats : c'est ce que
+        # le garde-fou de citations attend d'un modèle honnête.
+        "cited_urls": urls[:1] if verdict != "CLEAR" else [],
+        "identifiable": identifiable,
+    }
+
+
+def _dual_transport(request: dict[str, Any]) -> dict[str, Any]:
+    """Un seul client Gemini sert les phases 2 et 5 : on aiguille sur le schéma."""
+    if request["schema"] == "Classification":
+        body = _classification_for(request["prompt"])
+    else:
+        body = json.loads(_scripted_transport(request)["json"])
+    return {"json": json.dumps(body), "usage": {"prompt_tokens": 900, "output_tokens": 140}}
+
+
+def clearance_client() -> GeminiClient:
+    client = GeminiClient(transport=_dual_transport)
+    client._fixtures.mode = "live"
+    return client
+
+
+def full_run(sample_script, search: ScriptedSearch | None = None):
+    return run_clearance(
+        sample_script, clearance_client(), search or ScriptedSearch(), max_workers=4
+    )
+
+
+def test_every_hand_verified_verdict_is_reproduced(sample_script):
+    run = full_run(sample_script)
+    by_name = {
+        next(e.canonical_name for e in run.extraction.entities if e.id == f.entity_id): f.verdict
+        for f in run.findings
+    }
+
+    mismatches = {
+        name: (by_name.get(name), expected)
+        for name, expected in EXPECTED_VERDICTS.items()
+        if by_name.get(name) is not expected
+    }
+    assert not mismatches, f"écarts avec samples/EXPECTED.md : {mismatches}"
+
+
+def test_depiction_rule_moves_exactly_the_entities_it_should(sample_script):
+    run = full_run(sample_script)
+    escalated = {
+        next(e.canonical_name for e in run.extraction.entities if e.id == f.entity_id)
+        for f in run.escalated
+    }
+    # Identifiables et mises en scène dans un délit — et elles seules.
+    assert escalated == {"The Black Cat Tavern", "Marcus Webb", "Mercy General Hospital"}
+
+
+def test_the_control_case_survives_the_whole_pipeline(sample_script):
+    """Coca-Cola traverse extraction, recherche et classification sans être
+    signalée. C'est la preuve que le système raisonne sur la dépiction au lieu
+    d'avoir appris « réel ⇒ risqué »."""
+    run = full_run(sample_script)
+    coke = next(
+        f
+        for f in run.findings
+        if next(e.canonical_name for e in run.extraction.entities if e.id == f.entity_id)
+        == "Coca-Cola"
+    )
+    assert coke.verdict is Verdict.CLEAR
+    assert coke.escalated_from is None
+
+
+def test_flagged_entities_all_carry_a_verifiable_source(sample_script):
+    """Aucune mise en cause sans source : c'est la règle qui rend le rapport
+    opposable plutôt que déclaratif."""
+    run = full_run(sample_script)
+    unsourced = [
+        f.entity_id
+        for f in run.flagged
+        if f.search_mode is not None and not f.citations and f.verdict is not Verdict.UNRESOLVED
+    ]
+    assert not unsourced
+
+
+def test_rule_resolved_entities_cost_nothing(sample_script):
+    search = ScriptedSearch()
+    run = full_run(sample_script, search)
+    rule_resolved = run.research.skipped_by_rule
+
+    assert len(rule_resolved) == 5
+    # Une recherche par entité facturable, pas une de plus.
+    assert len(search.performed) == len(run.extraction.entities) - len(rule_resolved)
+    # Et pas un appel modèle pour les entités déjà tranchées.
+    assert run.gemini_usage["calls"] == len(run.extraction.scenes) + len(search.performed)
+
+
+def test_replay_mode_reports_no_spend(sample_script):
+    """Le harnais de fixtures est en replay : la passe complète est rejouable
+    autant de fois que nécessaire sans consommer un crédit."""
+    run = full_run(sample_script)
+
+    assert run.search_usage["fixture_mode"] == "replay"
+    assert run.search_usage["requests"] == 0
+    assert run.search_usage["cost_usd"] == 0.0
+
+
+def test_clearance_report_leads_with_what_must_change(sample_script):
+    text = clearance_report(full_run(sample_script))
+
+    assert "Verdicts" in text
+    assert text.index("[CHANGE_RECOMMENDED]") < text.index("[CLEAR]")
+    assert "remonté depuis" in text

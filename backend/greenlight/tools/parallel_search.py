@@ -24,6 +24,7 @@ au modèle qui va les lire.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -87,7 +88,10 @@ class ParallelSearch:
         self._fixtures = FixtureStore("parallel_search")
         self._client: parallel.Parallel | None = None
         # Compteurs cumulés sur la durée de vie de l'instance : c'est ce qui
-        # alimente le chiffre mesuré affiché dans le rapport et la démo.
+        # alimente le chiffre mesuré affiché dans le rapport et la démo. Le
+        # fan-out de la phase 4 les incrémente depuis plusieurs threads, d'où le
+        # verrou : un chiffre annoncé doit tenir sous vérification.
+        self._lock = threading.Lock()
         self.total_requests = 0
         self.total_cost_usd = 0.0
 
@@ -150,14 +154,16 @@ class ParallelSearch:
 
         # En replay, rien n'a été facturé : ne pas gonfler le compteur.
         if self._fixtures.mode != "replay":
-            self.total_requests += response.requests_billed
-            self.total_cost_usd += response.cost_usd
+            with self._lock:
+                self.total_requests += response.requests_billed
+                self.total_cost_usd += response.cost_usd
 
         return response
 
     def usage_summary(self) -> dict[str, float | int]:
-        return {
-            "requests": self.total_requests,
-            "cost_usd": round(self.total_cost_usd, 4),
-            "fixture_mode": self._fixtures.mode,
-        }
+        with self._lock:
+            return {
+                "requests": self.total_requests,
+                "cost_usd": round(self.total_cost_usd, 4),
+                "fixture_mode": self._fixtures.mode,
+            }

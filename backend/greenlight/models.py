@@ -162,14 +162,30 @@ class Finding(BaseModel):
     replacement_verified: bool = False
     prompt_version: str = "v1"
 
+    # Contexte de dépiction le plus grave rencontré dans le scénario, et
+    # verdict avant application de la règle de dépiction. Les deux sont
+    # affichés dans le rapport : c'est la trace visible du raisonnement, pas
+    # une boîte noire qui sort une couleur.
+    context_tier: ContextTier = ContextTier.NEUTRAL
+    escalated_from: Verdict | None = None
+    search_mode: str | None = None
+
 
 class Classification(BaseModel):
-    """responseSchema de la phase 5."""
+    """responseSchema de la phase 5.
+
+    `identifiable` est le pivot du produit. Le modèle ne se contente pas de dire
+    « ça existe » : il dit si les sources désignent une entité réelle *précise*
+    qu'un lecteur rattacherait à ce que la scène met en scène. C'est ce booléen
+    qui autorise la règle de dépiction à faire monter le verdict — sans lui, un
+    nom banal et une entité nommément identifiée seraient traités pareil.
+    """
 
     verdict: Verdict
     confidence: float = Field(ge=0.0, le=1.0)
     rationale: str
     cited_urls: list[str] = Field(default_factory=list)
+    identifiable: bool = False
 
 
 # --------------------------------------------------------------------------

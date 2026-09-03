@@ -1,12 +1,15 @@
-"""Orchestration des phases 1 → 3, et point d'entrée en ligne de commande.
+"""Orchestration du pipeline, et point d'entrée en ligne de commande.
 
     python -m greenlight.pipeline samples/seventeen_minutes.fountain
+    python -m greenlight.pipeline samples/seventeen_minutes.fountain --clearance
 
-Ce module chaîne l'ingestion, l'extraction et la canonicalisation, puis rend un
-état complet du scénario : entités canoniques, occurrences, contexte de
-dépiction, et la consommation réellement mesurée. Les phases 4 et 5 —
-recherche Parallel et classification — s'y branchent ensuite sans rien changer
-en amont.
+Sans option, seules les phases 1 → 3 tournent : ingestion, extraction,
+canonicalisation. Aucun crédit Parallel n'est touché, ce qui en fait le mode de
+travail par défaut pendant le développement.
+
+Avec `--clearance`, les phases 4 et 5 s'ajoutent : fan-out de recherche puis
+verdicts sourcés. En `FIXTURE_MODE=replay` cette passe complète ne coûte rien
+non plus — c'est ce qui permet d'itérer sur le rapport sans brûler le budget.
 
 Le compte-rendu affiché est volontairement le même que celui qui alimentera la
 démo : ce sont ces chiffres-là qu'on annonce, et ils sont mesurés.
@@ -21,11 +24,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from greenlight.agents.classify import classify, sort_findings
 from greenlight.agents.dedupe import canonicalize
 from greenlight.agents.extract import SceneEntities, extract_draft
 from greenlight.agents.gemini import GeminiClient
+from greenlight.agents.research import ResearchRun, research
 from greenlight.ingest.fountain import parse_file
-from greenlight.models import Draft, Entity
+from greenlight.models import Draft, Entity, Finding, Verdict
+from greenlight.tools.parallel_search import ParallelSearch
 from greenlight.tools.queries import build_search, choose_mode, pre_verdict
 
 
@@ -70,6 +76,57 @@ def run_extraction(
     )
 
 
+@dataclass
+class ClearanceRun:
+    """Passe complète : phases 1 → 5, du fichier de scénario aux verdicts."""
+
+    extraction: ExtractionRun
+    research: ResearchRun
+    findings: list[Finding]
+    elapsed_s: float = 0.0
+    search_usage: dict[str, float | int] = field(default_factory=dict)
+    gemini_usage: dict[str, Any] = field(default_factory=dict)
+
+    def by_verdict(self, verdict: Verdict) -> list[Finding]:
+        return [f for f in self.findings if f.verdict is verdict]
+
+    @property
+    def flagged(self) -> list[Finding]:
+        """Ce que le scénariste doit traiter avant le tournage."""
+        return [f for f in self.findings if f.verdict is not Verdict.CLEAR]
+
+    @property
+    def escalated(self) -> list[Finding]:
+        """Verdicts remontés par la règle de dépiction. La démonstration que les
+        deux signaux sont combinés, et pas seulement l'existence."""
+        return [f for f in self.findings if f.escalated_from is not None]
+
+
+def run_clearance(
+    path: str | Path,
+    client: GeminiClient | None = None,
+    search: ParallelSearch | None = None,
+    draft_id: str = "draft-1",
+    max_workers: int = 8,
+) -> ClearanceRun:
+    """Phases 1 → 5 : fichier de scénario → verdicts sourcés."""
+    started = time.monotonic()
+    client = client or GeminiClient()
+
+    extraction = run_extraction(path, client, draft_id=draft_id)
+    research_run = research(extraction.entities, search, max_workers=max_workers)
+    findings = sort_findings(classify(research_run.results, client, draft_id=draft_id))
+
+    return ClearanceRun(
+        extraction=extraction,
+        research=research_run,
+        findings=findings,
+        elapsed_s=round(time.monotonic() - started, 2),
+        search_usage=research_run.usage,
+        gemini_usage=client.usage_summary(),
+    )
+
+
 def report(run: ExtractionRun) -> str:
     """Compte-rendu console. Les chiffres annoncés dans la démo sortent d'ici."""
     free = run.resolved_without_search()
@@ -85,7 +142,7 @@ def report(run: ExtractionRun) -> str:
         f"À rechercher : {len(billable)} dont {len(advanced)} en mode advanced",
         f"Écartées     : {run.dropped_count} absentes du texte (garde-fou)",
         f"Durée        : {run.elapsed_s} s",
-        f"Gemini       : {run.usage}",
+        f"Gemini (ph.2): {run.usage}",
     ]
     if run.failed_scenes:
         lines.append(f"Scènes en échec : {[s.scene.number for s in run.failed_scenes]}")
@@ -103,22 +160,75 @@ def report(run: ExtractionRun) -> str:
     return "\n".join(lines)
 
 
+def clearance_report(run: ClearanceRun) -> str:
+    """Le rapport tel qu'il sera lu. Chiffres mesurés, verdicts sourcés."""
+    findings = run.findings
+    lines = [
+        report(run.extraction),
+        "",
+        "─" * 72,
+        f"Verdicts     : {len(findings)} — {len(run.flagged)} à traiter avant tournage",
+    ]
+    for verdict in Verdict:
+        count = len(run.by_verdict(verdict))
+        if count:
+            lines.append(f"  {verdict.value:<20} {count}")
+
+    lines += [
+        f"Recherche    : {run.search_usage}",
+        f"Gemini (tout): {run.gemini_usage}",
+        f"Durée totale : {run.elapsed_s} s",
+    ]
+    if run.research.failed:
+        lines.append(
+            f"Recherches en échec : {[r.entity.canonical_name for r in run.research.failed]}"
+        )
+
+    lines.append("")
+    for finding in findings:
+        entity = next(e for e in run.extraction.entities if e.id == finding.entity_id)
+        lines.append(f"[{finding.verdict.value}] {entity.canonical_name}")
+        lines.append(f"    {finding.rationale}")
+        if finding.escalated_from is not None:
+            lines.append(
+                f"    ↑ remonté depuis {finding.escalated_from.value} — dépiction "
+                f"« {finding.context_tier.value} » dans le scénario"
+            )
+        for citation in finding.citations[:3]:
+            lines.append(f"    · {citation.title or citation.url}")
+            lines.append(f"      {citation.url}")
+        if not finding.citations and finding.search_mode:
+            lines.append("    · aucune source retenue")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="GREENLIGHT — extraction phases 1 à 3")
+    parser = argparse.ArgumentParser(description="GREENLIGHT — pipeline de clearance")
     parser.add_argument("script", help="chemin d'un fichier .fountain")
+    parser.add_argument(
+        "--clearance",
+        action="store_true",
+        help="ajoute les phases 4 et 5 : recherche Parallel puis verdicts sourcés",
+    )
     parser.add_argument(
         "--queries",
         action="store_true",
-        help="affiche aussi les requêtes Parallel qui seraient émises (sans les émettre)",
+        help="affiche les requêtes Parallel qui seraient émises (sans les émettre)",
     )
     args = parser.parse_args(argv)
 
-    run = run_extraction(args.script)
-    print(report(run))
+    if args.clearance:
+        run = run_clearance(args.script)
+        print(clearance_report(run))
+        extraction = run.extraction
+    else:
+        extraction = run_extraction(args.script)
+        print(report(extraction))
 
     if args.queries:
         print("\nRequêtes Parallel prévues :")
-        for entity in run.entities:
+        for entity in extraction.entities:
             if pre_verdict(entity) is not None:
                 continue
             spec = build_search(entity, scene_hint=entity.occurrences[0].quote[:80])

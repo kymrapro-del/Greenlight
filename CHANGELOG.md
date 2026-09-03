@@ -20,12 +20,33 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Phase 3 — canonicalisation** (`greenlight.agents.dedupe`) — merges the
   spellings of one entity across a screenplay under conservative rules, with
   stable ids so the planned diff mode can compare two drafts.
-- **Pipeline runner** (`greenlight.pipeline`) — chains phases 1→3 and prints the
-  measured report: entity count, entities resolved with no search, search-budget
-  split, and dropped hallucinations. `python -m greenlight.pipeline <script>`.
+- **Phase 4 — research fan-out** (`greenlight.agents.research`) — concurrent
+  Parallel lookups, with rule-resolved entities never entering the billed queue
+  and search depth chosen per entity. A failed lookup is recorded and the entity
+  falls back to `UNRESOLVED` rather than taking down the report.
+- **Phase 5 — sourced verdicts** (`greenlight.agents.classify`) — the model
+  judges only from the search excerpts it was given. Cited URLs absent from
+  those results are discarded, and any adverse verdict left with no verifiable
+  source falls back to `UNRESOLVED`: an unsourced accusation is not a finding.
+- **Depiction rule** — existence and depiction are two separate signals combined
+  by one explicit, testable function. A real entity a source specifically
+  identifies is escalated when the scene depicts a crime; a common name with no
+  matching profile is not. The report shows what was escalated and from what.
+- **Pipeline runner** (`greenlight.pipeline`) — chains phases 1→3, or 1→5 with
+  `--clearance`, and prints the measured report: entity count, entities resolved
+  with no search, search-budget split, dropped hallucinations, verdict
+  breakdown, and per-finding sources.
+- **Thread-safe cost accounting** — the fan-out increments the Parallel and
+  Gemini counters from several threads; the totals the demo quotes are locked so
+  they hold up under verification.
+
+### Verified
+- On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
+  hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
+  entities the depiction rule should touch, and leaves the Coca-Cola control
+  case `CLEAR`. 88 tests, all offline: no token and no credit spent in CI.
 
 ### Planned
-- Phase 5 — verdict classification with citations
 - Phase 6 — re-verified replacement suggestions
 - Phase 8 — draft-to-draft diff mode
 - Material 3 report UI

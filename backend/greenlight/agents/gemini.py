@@ -25,6 +25,7 @@ Vertex pour le déploiement final.
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -51,6 +52,10 @@ class GeminiClient:
         self._transport = transport
         self._fixtures = FixtureStore(namespace)
         self._client: genai.Client | None = None
+        # Même garantie que côté Parallel : les compteurs sont incrémentés
+        # depuis plusieurs threads dès que le pipeline traite les scènes en
+        # parallèle, et le total annoncé doit être exact.
+        self._lock = threading.Lock()
         self.prompt_tokens = 0
         self.output_tokens = 0
         self.calls = 0
@@ -125,9 +130,10 @@ class GeminiClient:
         usage = raw.get("usage") or {}
         # En replay rien n'a été consommé : ne pas gonfler le compteur.
         if self._fixtures.mode != "replay":
-            self.calls += 1
-            self.prompt_tokens += int(usage.get("prompt_tokens", 0))
-            self.output_tokens += int(usage.get("output_tokens", 0))
+            with self._lock:
+                self.calls += 1
+                self.prompt_tokens += int(usage.get("prompt_tokens", 0))
+                self.output_tokens += int(usage.get("output_tokens", 0))
 
         payload = raw.get("json", "")
         try:
@@ -142,12 +148,13 @@ class GeminiClient:
     # -- coût ------------------------------------------------------------
 
     def usage_summary(self) -> dict[str, Any]:
-        summary: dict[str, Any] = {
-            "calls": self.calls,
-            "prompt_tokens": self.prompt_tokens,
-            "output_tokens": self.output_tokens,
-            "fixture_mode": self._fixtures.mode,
-        }
+        with self._lock:
+            summary: dict[str, Any] = {
+                "calls": self.calls,
+                "prompt_tokens": self.prompt_tokens,
+                "output_tokens": self.output_tokens,
+                "fixture_mode": self._fixtures.mode,
+            }
         cost = self.cost_usd()
         if cost is not None:
             summary["cost_usd"] = round(cost, 4)
