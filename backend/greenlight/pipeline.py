@@ -26,8 +26,10 @@ from typing import Any
 
 from greenlight.agents.classify import classify, sort_findings
 from greenlight.agents.dedupe import canonicalize
+from greenlight.agents.diff import DraftDiff, plan
 from greenlight.agents.extract import SceneEntities, extract_draft
 from greenlight.agents.gemini import GeminiClient
+from greenlight.agents.replace import suggest_replacements
 from greenlight.agents.research import ResearchRun, research
 from greenlight.ingest.fountain import parse_file
 from greenlight.models import Draft, Entity, Finding, Verdict
@@ -86,6 +88,8 @@ class ClearanceRun:
     elapsed_s: float = 0.0
     search_usage: dict[str, float | int] = field(default_factory=dict)
     gemini_usage: dict[str, Any] = field(default_factory=dict)
+    # Renseigné quand la passe s'appuie sur une version précédente.
+    diff: DraftDiff | None = None
 
     def by_verdict(self, verdict: Verdict) -> list[Finding]:
         return [f for f in self.findings if f.verdict is verdict]
@@ -101,6 +105,11 @@ class ClearanceRun:
         deux signaux sont combinés, et pas seulement l'existence."""
         return [f for f in self.findings if f.escalated_from is not None]
 
+    @property
+    def verified_replacements(self) -> list[Finding]:
+        """Remplacements proposés ET repassés par la recherche sans résultat."""
+        return [f for f in self.findings if f.replacement_verified]
+
 
 def run_clearance(
     path: str | Path,
@@ -108,22 +117,43 @@ def run_clearance(
     search: ParallelSearch | None = None,
     draft_id: str = "draft-1",
     max_workers: int = 8,
+    suggest: bool = False,
+    previous: ClearanceRun | None = None,
 ) -> ClearanceRun:
-    """Phases 1 → 5 : fichier de scénario → verdicts sourcés."""
+    """Passe de clearance sur un scénario.
+
+    Avec `previous`, seules les entités que la réécriture a réellement touchées
+    repartent dans le pipeline ; les autres gardent leur verdict. Avec
+    `suggest`, les entités à corriger reçoivent un remplacement re-vérifié.
+    """
     started = time.monotonic()
     client = client or GeminiClient()
+    search = search or ParallelSearch()
 
     extraction = run_extraction(path, client, draft_id=draft_id)
-    research_run = research(extraction.entities, search, max_workers=max_workers)
-    findings = sort_findings(classify(research_run.results, client, draft_id=draft_id))
+
+    if previous is not None:
+        draft_diff = plan(
+            previous.extraction.entities, previous.findings, extraction.entities, draft_id
+        )
+        targets, reused = draft_diff.to_analyze, draft_diff.reused
+    else:
+        draft_diff, targets, reused = None, extraction.entities, []
+
+    research_run = research(targets, search, max_workers=max_workers)
+    findings = classify(research_run.results, client, draft_id=draft_id)
+
+    if suggest:
+        findings = suggest_replacements(findings, extraction.entities, client, search)
 
     return ClearanceRun(
         extraction=extraction,
         research=research_run,
-        findings=findings,
+        findings=sort_findings(findings + reused),
         elapsed_s=round(time.monotonic() - started, 2),
-        search_usage=research_run.usage,
+        search_usage=search.usage_summary(),
         gemini_usage=client.usage_summary(),
+        diff=draft_diff,
     )
 
 
@@ -174,7 +204,17 @@ def clearance_report(run: ClearanceRun) -> str:
         if count:
             lines.append(f"  {verdict.value:<20} {count}")
 
+    if run.diff is not None:
+        lines += ["", f"Diff         : {run.diff.summary()}"]
+        if run.diff.added:
+            lines.append(f"  nouvelles  : {[e.canonical_name for e in run.diff.added]}")
+        if run.diff.recontextualized:
+            lines.append(f"  redépeintes: {[e.canonical_name for e in run.diff.recontextualized]}")
+        if run.diff.removed:
+            lines.append(f"  disparues  : {[e.canonical_name for e in run.diff.removed]}")
+
     lines += [
+        "",
         f"Recherche    : {run.search_usage}",
         f"Gemini (tout): {run.gemini_usage}",
         f"Durée totale : {run.elapsed_s} s",
@@ -194,6 +234,13 @@ def clearance_report(run: ClearanceRun) -> str:
                 f"    ↑ remonté depuis {finding.escalated_from.value} — dépiction "
                 f"« {finding.context_tier.value} » dans le scénario"
             )
+        if finding.suggested_replacement:
+            mark = (
+                "re-vérifié, aucun résultat réel"
+                if finding.replacement_verified
+                else "non vérifié — à relire"
+            )
+            lines.append(f"    → remplacer par « {finding.suggested_replacement} » ({mark})")
         for citation in finding.citations[:3]:
             lines.append(f"    · {citation.title or citation.url}")
             lines.append(f"      {citation.url}")
@@ -212,14 +259,34 @@ def main(argv: list[str] | None = None) -> int:
         help="ajoute les phases 4 et 5 : recherche Parallel puis verdicts sourcés",
     )
     parser.add_argument(
+        "--suggest",
+        action="store_true",
+        help="propose un remplacement re-vérifié pour chaque entité à corriger",
+    )
+    parser.add_argument(
+        "--against",
+        metavar="SCRIPT_V1",
+        help="version précédente : seules les entités réellement touchées sont réanalysées",
+    )
+    parser.add_argument(
         "--queries",
         action="store_true",
         help="affiche les requêtes Parallel qui seraient émises (sans les émettre)",
     )
     args = parser.parse_args(argv)
 
-    if args.clearance:
-        run = run_clearance(args.script)
+    if args.clearance or args.against or args.suggest:
+        previous = None
+        if args.against:
+            previous = run_clearance(args.against, draft_id="draft-1", suggest=args.suggest)
+            print(clearance_report(previous))
+            print("\n" + "=" * 72 + "\nVERSION SUIVANTE\n" + "=" * 72 + "\n")
+        run = run_clearance(
+            args.script,
+            draft_id="draft-2" if previous else "draft-1",
+            suggest=args.suggest,
+            previous=previous,
+        )
         print(clearance_report(run))
         extraction = run.extraction
     else:

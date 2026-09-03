@@ -40,15 +40,31 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Gemini counters from several threads; the totals the demo quotes are locked so
   they hold up under verification.
 
+- **Phase 6 — re-verified replacements** (`greenlight.agents.replace`) — a
+  suggested name is put back through the same search as the original, and marked
+  verified only when nothing real comes back; an unverifiable candidate is still
+  offered but labelled as such. Phone numbers and e-mail addresses take the
+  professional convention (555-01XX, RFC 2606) with no model call and no search.
+  Nothing is suggested where renaming would be bad advice — a song under
+  copyright needs a licence, not a new title.
+- **Phase 8 — draft-to-draft diff** (`greenlight.agents.diff`) — a verdict is
+  reused only when the entity, its worst depiction, and the prompt version are
+  all unchanged. Everything else goes back through the pipeline: an entity kept
+  under the same name but newly implicated in a crime is re-analysed, never
+  silently carried over.
+- **Second sample draft** (`samples/seventeen_minutes_v2.fountain`) — the rewrite
+  a writer would actually produce: two entities renamed, a phone number fixed, a
+  scene added, and one entity kept by name but re-depicted.
+
 ### Verified
 - On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
   hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
   entities the depiction rule should touch, and leaves the Coca-Cola control
-  case `CLEAR`. 88 tests, all offline: no token and no credit spent in CI.
+  case `CLEAR`. On the rewrite, 5 of 16 entities are re-analysed and 68 % of the
+  research is skipped. 120 tests, all offline: no token and no credit spent
+  in CI.
 
 ### Planned
-- Phase 6 — re-verified replacement suggestions
-- Phase 8 — draft-to-draft diff mode
 - Material 3 report UI
 
 ## [0.1.0] — 2026-09-03

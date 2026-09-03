@@ -18,3 +18,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 @pytest.fixture(scope="session")
 def sample_script() -> Path:
     return REPO_ROOT / "samples" / "seventeen_minutes.fountain"
+
+
+@pytest.fixture(scope="session")
+def sample_script_v2() -> Path:
+    """Réécriture du scénario de démonstration : deux entités renommées, un
+    numéro corrigé, une entité redépeinte, une scène ajoutée."""
+    return REPO_ROOT / "samples" / "seventeen_minutes_v2.fountain"

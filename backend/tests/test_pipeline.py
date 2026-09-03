@@ -308,3 +308,122 @@ def test_clearance_report_leads_with_what_must_change(sample_script):
     assert "Verdicts" in text
     assert text.index("[CHANGE_RECOMMENDED]") < text.index("[CLEAR]")
     assert "remonté depuis" in text
+
+
+# --------------------------------------------------------------------------
+# Phase 8 : la réécriture, de bout en bout
+# --------------------------------------------------------------------------
+
+# Ce que la version 2 introduit. Le reste du catalogue est inchangé, donc les
+# verdicts correspondants doivent être repris sans nouvelle recherche.
+V2_ENTITIES: list[tuple[str, EntityType, ContextTier]] = [
+    ("The Paper Lantern", EntityType.BUSINESS, ContextTier.ILLEGAL),
+    ("Saint Odile Medical Center", EntityType.INSTITUTION, ContextTier.ILLEGAL),
+    ("312-555-0188", EntityType.PHONE, ContextTier.NEUTRAL),
+    ("Riverton County Courthouse", EntityType.INSTITUTION, ContextTier.NEUTRAL),
+]
+
+# Le titre est le même dans les deux versions ; c'est la scène qui change. Le
+# stub relit donc le texte au lieu de coder la version en dur, exactement comme
+# le modèle le ferait : la v2 fait du journal l'instrument d'un faux.
+CONTEXT_OVERRIDES: dict[str, tuple[str, ContextTier]] = {
+    "Chicago Tribune": ("forged", ContextTier.ILLEGAL),
+}
+
+
+def v2_client() -> GeminiClient:
+    """Même transport, avec le catalogue élargi aux entités de la version 2."""
+    catalogue = LANDMINES + V2_ENTITIES
+
+    def transport(request: dict[str, Any]) -> dict[str, Any]:
+        if request["schema"] == "Classification":
+            return {
+                "json": json.dumps(_classification_for(request["prompt"])),
+                "usage": {"prompt_tokens": 900, "output_tokens": 140},
+            }
+        prompt = request["prompt"].lower()
+        haystack = _NON_ALNUM.sub("", prompt)
+        seen, entities = set(), []
+        for name, etype, tier in catalogue:
+            if name in seen or _NON_ALNUM.sub("", name.lower()) not in haystack:
+                continue
+            seen.add(name)
+            trigger = CONTEXT_OVERRIDES.get(name)
+            if trigger is not None and trigger[0] in prompt:
+                tier = trigger[1]
+            entities.append(
+                {"name": name, "type": etype.value, "context_tier": tier.value, "quote": name}
+            )
+        return {
+            "json": json.dumps({"entities": entities}),
+            "usage": {"prompt_tokens": 900, "output_tokens": 140},
+        }
+
+    client = GeminiClient(transport=transport)
+    client._fixtures.mode = "live"
+    return client
+
+
+def rewrite_run(sample_script, sample_script_v2, search: ScriptedSearch | None = None):
+    first = run_clearance(sample_script, v2_client(), ScriptedSearch(), max_workers=4)
+    second = run_clearance(
+        sample_script_v2,
+        v2_client(),
+        search or ScriptedSearch(),
+        draft_id="draft-2",
+        max_workers=4,
+        previous=first,
+    )
+    return first, second
+
+
+def test_a_rewrite_only_reanalyzes_what_actually_moved(sample_script, sample_script_v2):
+    search = ScriptedSearch()
+    first, second = rewrite_run(sample_script, sample_script_v2, search)
+
+    names = {e.canonical_name for e in second.diff.to_analyze}
+    assert names == {
+        "The Paper Lantern",  # renommé
+        "Saint Odile Medical Center",  # renommé
+        "312-555-0188",  # numéro corrigé
+        "Riverton County Courthouse",  # scène ajoutée
+        "Chicago Tribune",  # même nom, dépiction devenue délictueuse
+    }
+    # Une recherche pour les seules entités facturables de ce sous-ensemble.
+    assert len(search.performed) < len(first.extraction.entities)
+
+
+def test_the_rewrite_keeps_every_other_verdict(sample_script, sample_script_v2):
+    _, second = rewrite_run(sample_script, sample_script_v2)
+
+    reused = {f.entity_id for f in second.diff.reused}
+    assert "product_brand:coca-cola" in reused
+    assert "song:sweet-child-o-mine" in reused
+    # Un verdict repris est réattribué à la nouvelle version, pas laissé sur
+    # l'ancienne : sinon le rapport v2 citerait des identifiants de v1.
+    assert all(f.draft_id == "draft-2" for f in second.diff.reused)
+
+
+def test_a_recontextualized_entity_is_never_silently_reused(sample_script, sample_script_v2):
+    """Chicago Tribune garde son nom mais devient l'instrument d'un faux. Reprendre
+    son verdict de v1 laisserait passer un risque réel."""
+    _, second = rewrite_run(sample_script, sample_script_v2)
+
+    assert "Chicago Tribune" in {e.canonical_name for e in second.diff.recontextualized}
+    assert "publication:chicago-tribune" not in {f.entity_id for f in second.diff.reused}
+
+
+def test_the_renamed_entities_are_gone_from_the_new_report(sample_script, sample_script_v2):
+    _, second = rewrite_run(sample_script, sample_script_v2)
+
+    removed = {e.canonical_name for e in second.diff.removed}
+    assert {"The Black Cat Tavern", "Mercy General Hospital", "312-555-8890"} <= removed
+
+
+def test_the_report_states_the_saving(sample_script, sample_script_v2):
+    _, second = rewrite_run(sample_script, sample_script_v2)
+    text = clearance_report(second)
+
+    assert "Diff" in text
+    assert "verdicts repris de la version précédente" in text
+    assert "% de la recherche évitée" in text
