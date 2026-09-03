@@ -7,8 +7,24 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- **Gemini transport** (`greenlight.agents.gemini`) — one entry point for every
+  model call: strict `responseSchema` output, the same `record`/`replay` fixture
+  harness as Parallel, and measured token accounting. Vertex AI or AI Studio
+  behind a single flag. Token cost is reported only when per-million prices are
+  supplied, so no dollar figure is ever invented.
+- **Phase 2 — entity extraction** (`greenlight.agents.extract`) — one call per
+  scene, returning both what the entity *is* and how the scene *depicts* it.
+  A deterministic guard drops any entity absent from the scene text before it
+  can reach the billed search queue.
+- **Phase 3 — canonicalisation** (`greenlight.agents.dedupe`) — merges the
+  spellings of one entity across a screenplay under conservative rules, with
+  stable ids so the planned diff mode can compare two drafts.
+- **Pipeline runner** (`greenlight.pipeline`) — chains phases 1→3 and prints the
+  measured report: entity count, entities resolved with no search, search-budget
+  split, and dropped hallucinations. `python -m greenlight.pipeline <script>`.
+
 ### Planned
-- Phase 2 — Gemini entity extraction with strict `responseSchema`
 - Phase 5 — verdict classification with citations
 - Phase 6 — re-verified replacement suggestions
 - Phase 8 — draft-to-draft diff mode
