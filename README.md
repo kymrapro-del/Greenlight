@@ -137,7 +137,7 @@ it matters.
 
 Two numbers, and the difference between them is deliberate.
 
-**Measured, on the 12-page test screenplay:** 15 canonical entities, 5 settled by
+**Measured, on the test screenplay:** 15 canonical entities, 5 settled by
 rule with no billed request, 10 researched, 3 verdicts escalated by the depiction
 rule, 6 hallucinated entities dropped before the fan-out. On the rewrite, the
 diff re-analyses 5 of 16 entities and reuses 11 verdicts — **68 % of the research
@@ -248,6 +248,11 @@ so **CI is free and deterministic**.
 short screenplay written for this project and deliberately seeded with clearance
 landmines covering every report category — including one **intentionally
 harmless** trap the system must return as `CLEAR`.
+
+It is six scenes, about three pages by the parser's own estimate: dense enough
+to hold fifteen landmines, short enough that a full pass costs almost nothing to
+re-run. It is a test fixture, not a feature film, and it is described that way
+rather than inflated.
 
 That last one matters: it is the proof the system reasons about context instead
 of painting everything red.

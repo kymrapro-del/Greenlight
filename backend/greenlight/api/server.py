@@ -52,7 +52,7 @@ SAMPLES = [
         "id": "seventeen-minutes",
         "file": "seventeen_minutes.fountain",
         "title": "Seventeen Minutes",
-        "subtitle": "Premier jet — 12 pages, pièges de clearance sur toutes les catégories",
+        "subtitle": "Premier jet — pièges de clearance sur toutes les catégories",
     },
     {
         "id": "seventeen-minutes-v2",
