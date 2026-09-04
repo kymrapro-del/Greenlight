@@ -9,11 +9,15 @@ export interface Thread {
 /**
  * Le volet, sur le modèle de Gemini.
  *
- * Trois zones empilées : l'action principale et les entrées de navigation en
- * haut, l'historique au milieu, le compte en bas. Les entrées sont des lignes
- * plates — icône + libellé, coin plein arrondi au survol — et non des cartes :
- * c'est ce qui donne au volet son calme, et ce qui laisse l'historique occuper
- * la hauteur.
+ * Trois zones empilées : la nouvelle analyse en haut, l'historique au milieu,
+ * le compte en bas. Les entrées sont des lignes plates — icône + libellé, coin
+ * plein arrondi au survol — et non des cartes : c'est ce qui donne au volet son
+ * calme, et ce qui laisse l'historique occuper la hauteur.
+ *
+ * Il n'y a rien d'autre. Une recherche d'entité, une bibliothèque de scénarios
+ * et un journal d'activité y figuraient, et ne faisaient rien : trois boutons
+ * morts que le premier visiteur clique. Un volet plus court qui tient ses
+ * promesses vaut mieux qu'un volet complet qui n'en tient aucune.
  *
  * Ce n'est pas un `navigation drawer` M3 au sens strict, qui suppose plusieurs
  * destinations. C'est un volet d'historique, bâti sur les mêmes tokens.
@@ -60,19 +64,6 @@ export function NavDrawer({
         {open && <span className="gl-label-large">Nouvelle analyse</span>}
       </button>
 
-      <nav className="gl-nav" aria-label="Sections">
-        <button type="button" className="gl-nav-item gl-state-layer">
-          <StateLayer />
-        <Icon name="search" size={20} />
-          {open && <span className="gl-label-large">Rechercher une entité</span>}
-        </button>
-        <button type="button" className="gl-nav-item gl-state-layer">
-          <StateLayer />
-        <Icon name="library" size={20} />
-          {open && <span className="gl-label-large">Scénarios</span>}
-        </button>
-      </nav>
-
       {open && (
         <div className="gl-recents">
           <p className="gl-label-medium gl-drawer-legend">Récentes</p>
@@ -92,12 +83,6 @@ export function NavDrawer({
           ))}
         </div>
       )}
-
-      <button type="button" className="gl-nav-item gl-state-layer">
-        <StateLayer />
-        <Icon name="history" size={20} />
-        {open && <span className="gl-label-large">Activité</span>}
-      </button>
 
       <div className="gl-account">
         <span className="gl-avatar-user" aria-hidden="true">

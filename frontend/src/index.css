@@ -156,11 +156,6 @@ body {
   padding: 0;
 }
 
-.gl-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
 
 .gl-recents {
   display: flex;
