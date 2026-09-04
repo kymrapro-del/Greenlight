@@ -1,202 +1,139 @@
-import { useEffect, useMemo, useState } from 'react';
-import '@material/web/chips/chip-set.js';
-import '@material/web/chips/filter-chip.js';
-import '@material/web/progress/circular-progress.js';
+import { useEffect, useState } from 'react';
 
+import { Composer } from './components/Composer';
 import { DiffStrip } from './components/DiffStrip';
-import { FindingDetail } from './components/FindingDetail';
 import { Icon } from './components/Icon';
-import { FindingList } from './components/FindingList';
-import { VERDICTS, VERDICT_STYLES, type Verdict } from './theme/verdicts';
+import { AssistantMessage, ResponseActions, UserMessage } from './components/Message';
+import { NavDrawer, type Thread } from './components/NavDrawer';
+import { ReportCard } from './components/ReportCard';
 import type { Report } from './types';
 
 /**
- * Écran Rapport — l'écran principal, en layout list-detail.
+ * GREENLIGHT — interface conversationnelle.
  *
- * Le rapport est pré-calculé et chargé d'emblée : personne n'arrive sur un
- * formulaire vide. La première entité à traiter est sélectionnée
- * automatiquement, pour qu'on voie un verdict complet dès la première seconde.
- */
-/**
- * Les deux versions du scénario de démonstration.
+ * Le rapport de clearance est rendu **dans** la réponse de l'assistant, comme
+ * Gemini rend un résultat structuré : pas un lien vers un autre écran, du
+ * contenu riche posé dans la conversation. Les verdicts gardent donc leurs
+ * affordances de lecture — filtres, sources, occurrences — sans quitter le fil.
  *
- * Basculer de l'une à l'autre est la démonstration du mode diff : la v2 est une
- * réécriture réelle — deux entités renommées, un numéro corrigé, une scène
- * ajoutée, et une entité conservée mais redépeinte.
+ * La conversation est pré-calculée et affichée d'emblée. Le battle plan est
+ * explicite : personne n'arrive sur un écran vide et n'attend une analyse.
  */
-const DRAFTS = [
-  { id: 'v1', label: 'Version 1', file: 'demo-report.json' },
-  { id: 'v2', label: 'Version 2 · réécriture', file: 'demo-report-v2.json' },
-] as const;
+const THREADS: Thread[] = [
+  {
+    id: 'v1',
+    title: 'Seventeen Minutes — v1',
+    subtitle: '15 entités · 10 à traiter',
+  },
+  {
+    id: 'v2',
+    title: 'Seventeen Minutes — v2',
+    subtitle: 'réécriture · 5 réanalysées',
+  },
+];
 
-type DraftId = (typeof DRAFTS)[number]['id'];
+const FILES: Record<string, string> = {
+  v1: 'demo-report.json',
+  v2: 'demo-report-v2.json',
+};
 
 export default function App() {
-  const [draftId, setDraftId] = useState<DraftId>('v1');
+  const [threadId, setThreadId] = useState<string>('v1');
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState<Set<Verdict>>(new Set());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const draft = DRAFTS.find((d) => d.id === draftId)!;
     let cancelled = false;
-
     setReport(null);
     setError(null);
 
-    fetch(draft.file)
+    fetch(FILES[threadId])
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: Report) => {
-        // Une réponse arrivée après un changement de version ne doit pas
-        // écraser celle de la version affichée.
-        if (cancelled) return;
-        setReport(data);
-        // Le rapport est déjà trié par sévérité : la première ligne est celle
-        // qui bloque le tournage.
-        setSelectedId(data.findings[0]?.id ?? null);
-      })
+      .then((data: Report) => !cancelled && setReport(data))
       .catch((e: Error) => !cancelled && setError(e.message));
 
     return () => {
       cancelled = true;
     };
-  }, [draftId]);
+  }, [threadId]);
 
-  const counts = useMemo(() => {
-    const out = Object.fromEntries(VERDICTS.map((v) => [v, 0])) as Record<Verdict, number>;
-    for (const f of report?.findings ?? []) out[f.verdict as Verdict] += 1;
-    return out;
-  }, [report]);
-
-  /**
-   * Le rapport arrive déjà trié : sévérité, puis constats sourcés avant entités
-   * tranchées par règle. Cette règle appartient au backend, qui seul connaît la
-   * sévérité relative des verdicts — la redériver ici créerait deux ordres
-   * concurrents, et c'est précisément ce qui a fait divergier la liste du
-   * détail. On filtre, on ne retrie pas.
-   */
-  const visible = useMemo(() => {
-    const findings = report?.findings ?? [];
-    return active.size === 0
-      ? findings
-      : findings.filter((f) => active.has(f.verdict as Verdict));
-  }, [report, active]);
-
-  const selected = visible.find((f) => f.id === selectedId) ?? visible[0] ?? null;
-
-  const toggle = (verdict: Verdict) => {
-    setActive((prev) => {
-      const next = new Set(prev);
-      if (next.has(verdict)) next.delete(verdict);
-      else next.add(verdict);
-      return next;
-    });
-  };
-
-  if (error) {
-    return (
-      <main className="gl-state">
-        <h1 className="gl-headline-small">Rapport indisponible</h1>
-        <p className="gl-body-medium">{error}</p>
-      </main>
-    );
-  }
-
-  if (!report) {
-    return (
-      <main className="gl-state">
-        <md-circular-progress indeterminate aria-label="Chargement du rapport" />
-      </main>
-    );
-  }
-
-
-  const { stats } = report;
+  const isRewrite = threadId === 'v2';
 
   return (
-    <div className="gl-app">
-      {/* Top app bar — @material/web ne la livre pas, elle est bâtie sur les tokens. */}
-      <header className="gl-topbar">
-        <div className="gl-topbar-identity">
+    <div className="gl-shell">
+      <NavDrawer
+        threads={THREADS}
+        activeId={threadId}
+        open={drawerOpen}
+        onSelect={setThreadId}
+        onToggle={() => setDrawerOpen((v) => !v)}
+      />
+
+      <div className="gl-main">
+        <header className="gl-topbar">
           <span className="gl-mark" aria-hidden="true" />
-          <div>
-            <h1 className="gl-title-large">GREENLIGHT</h1>
-            <p className="gl-body-small gl-topbar-sub">
-              {report.title} · {report.sceneCount} scènes · pré-clearance
-            </p>
+          <h1 className="gl-title-large">GREENLIGHT</h1>
+          <span className="gl-label-medium gl-model-chip">Gemini · Parallel Search</span>
+        </header>
+
+        <main className="gl-conversation">
+          <div className="gl-conversation-column">
+            <UserMessage>
+              {isRewrite
+                ? 'Voici la version 2 de Seventeen Minutes. Qu’est-ce qui change côté clearance ?'
+                : 'Analyse ce scénario avant qu’on le verrouille : Seventeen Minutes, 12 pages.'}
+            </UserMessage>
+
+            {error ? (
+              <AssistantMessage>
+                <p className="gl-body-large">Rapport indisponible : {error}</p>
+              </AssistantMessage>
+            ) : !report ? (
+              <AssistantMessage pending />
+            ) : (
+              <AssistantMessage>
+                <p className="gl-body-large gl-lede">
+                  {isRewrite ? (
+                    <>
+                      La réécriture change {report.diff?.reanalyzed ?? 0} entités sur{' '}
+                      {report.stats.entities}. J’ai repris les {report.diff?.reused ?? 0} autres
+                      verdicts sans les recalculer, et il reste{' '}
+                      <strong>{report.stats.flagged} points à traiter</strong> avant le tournage.
+                    </>
+                  ) : (
+                    <>
+                      J’ai relevé <strong>{report.stats.entities} entités nommées</strong> dans les{' '}
+                      {report.sceneCount} scènes. {report.stats.flagged} demandent une action avant
+                      le tournage, dont {report.stats.escalated} dont le verdict est monté d’un cran
+                      parce que la scène les met en cause.
+                    </>
+                  )}
+                </p>
+
+                {report.placeholder && (
+                  <p className="gl-body-small gl-banner">
+                    <Icon name="science" size={16} />
+                    Données de démonstration : ce rapport vient du harnais de test hors ligne. Les
+                    verdicts et les sources seront ceux d’un vrai passage une fois les fixtures
+                    enregistrées.
+                  </p>
+                )}
+
+                {report.diff && <DiffStrip diff={report.diff} />}
+
+                <ReportCard report={report} />
+
+                <ResponseActions
+                  note={`${report.stats.resolvedByRule} entités tranchées par règle, sans recherche facturée.`}
+                />
+              </AssistantMessage>
+            )}
           </div>
-        </div>
+        </main>
 
-        <div className="gl-topbar-end">
-          <div className="gl-draft-switch" role="group" aria-label="Version du scénario">
-            {DRAFTS.map((draft) => (
-              <button
-                key={draft.id}
-                type="button"
-                className="gl-draft-option gl-label-large gl-state-layer"
-                aria-pressed={draft.id === draftId}
-                onClick={() => setDraftId(draft.id)}
-              >
-                {draft.label}
-              </button>
-            ))}
-          </div>
-
-          <dl className="gl-metrics">
-            <Metric value={stats.entities} label="entités" />
-            <Metric value={stats.flagged} label="à traiter" accent />
-            <Metric value={stats.resolvedByRule} label="sans recherche" />
-            <Metric value={stats.escalated} label="verdicts remontés" />
-          </dl>
-        </div>
-      </header>
-
-      {report.placeholder && (
-        <p className="gl-banner gl-body-small" role="status">
-          <Icon name="science" />
-          Données de démonstration : ce rapport vient du harnais de test hors ligne. Les verdicts
-          et les sources seront ceux d’un vrai passage une fois les fixtures enregistrées.
-        </p>
-      )}
-
-      {report.diff && <DiffStrip diff={report.diff} />}
-
-      <main className="gl-panes">
-        <section className="gl-pane gl-pane-list" aria-label="Liste des entités">
-          <md-chip-set className="gl-filters" aria-label="Filtrer par verdict">
-            {VERDICTS.filter((v) => counts[v] > 0).map((verdict) => (
-              <md-filter-chip
-                key={verdict}
-                label={`${VERDICT_STYLES[verdict].label} (${counts[verdict]})`}
-                selected={active.has(verdict) || undefined}
-                onClick={() => toggle(verdict)}
-              />
-            ))}
-          </md-chip-set>
-
-          <FindingList findings={visible} selectedId={selected?.id ?? null} onSelect={setSelectedId} />
-        </section>
-
-        <section className="gl-pane gl-pane-detail" aria-label="Détail du verdict">
-          <FindingDetail finding={selected} />
-        </section>
-      </main>
-
-      <footer className="gl-footer gl-body-small">
-        Triage en amont, pas un avis juridique. GREENLIGHT ne remplace pas le rapport de clearance
-        exigé par l’assureur E&amp;O : il attrape les problèmes pendant l’écriture, quand les
-        corriger est encore gratuit.
-      </footer>
-    </div>
-  );
-}
-
-function Metric({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
-  return (
-    <div className={`gl-metric ${accent ? 'is-accent' : ''}`}>
-      <dt className="gl-headline-medium">{value}</dt>
-      <dd className="gl-label-medium">{label}</dd>
+        <Composer disabled />
+      </div>
     </div>
   );
 }

@@ -34,6 +34,16 @@ const PATHS: Record<string, string> = {
   document: 'M6.5 3.6h6.6l4.9 4.9v11.9H6.5zM13.1 3.6v4.9H18',
   // Fiole — données de démonstration.
   science: 'M10 3.6v5.8L4.9 18a1.6 1.6 0 0 0 1.4 2.4h11.4a1.6 1.6 0 0 0 1.4-2.4L14 9.4V3.6M9 3.6h6',
+  // Coquille du chat.
+  menu: 'M4 6.5h16M4 12h16M4 17.5h16',
+  add: 'M12 5v14M5 12h14',
+  attach: 'M20 11.5 12.4 19a4.6 4.6 0 0 1-6.5-6.5l7.6-7.6a3.1 3.1 0 0 1 4.4 4.4l-7.6 7.6a1.5 1.5 0 0 1-2.2-2.2l7-7',
+  send: 'M4.5 12 20 4.5l-4 15.5-4.2-6.1z M11.8 13.9 20 4.5',
+  expand_more: 'M6.5 9.5 12 15l5.5-5.5',
+  expand_less: 'M6.5 14.5 12 9l5.5 5.5',
+  thumb_up: 'M7 10.5v9.5H4.6a1.1 1.1 0 0 1-1.1-1.1v-7.3a1.1 1.1 0 0 1 1.1-1.1zM7 10.5l4.3-7.1a2 2 0 0 1 3.6 1.6l-.9 3.9h4.6a2 2 0 0 1 2 2.4l-1.3 6.2a2 2 0 0 1-2 1.5H7',
+  thumb_down: 'M7 13.5V4H4.6a1.1 1.1 0 0 0-1.1 1.1v7.3a1.1 1.1 0 0 0 1.1 1.1zM7 13.5l4.3 7.1a2 2 0 0 0 3.6-1.6l-.9-3.9h4.6a2 2 0 0 0 2-2.4l-1.3-6.2a2 2 0 0 0-2-1.5H7',
+  copy: 'M9 9h9.5v11.5H9zM15 9V4.5H5.5V16H9',
 };
 
 export type IconName = keyof typeof PATHS;
