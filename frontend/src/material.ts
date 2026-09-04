@@ -20,6 +20,10 @@
  * - `md-linear-progress` — l'indicateur d'une passe en cours, en mode
  *   indéterminé parce que c'est la vérité : le serveur sait quelle phase il
  *   traverse, pas combien de temps il lui reste.
+ * - `md-outlined-text-field` — le champ de recherche du rapport, avec son
+ *   libellé flottant, son contour interrompu et sa gestion du focus. Le
+ *   redessiner à la main reviendrait à réécrire le composant le plus détaillé
+ *   de la spécification.
  *
  * `md-ripple` et `md-focus-ring` s'attachent tout seuls à leur élément parent
  * (`AttachableController`) : il suffit de les poser dans un conteneur
@@ -30,3 +34,4 @@ import '@material/web/focus/md-focus-ring.js';
 import '@material/web/chips/chip-set.js';
 import '@material/web/chips/filter-chip.js';
 import '@material/web/progress/linear-progress.js';
+import '@material/web/textfield/outlined-text-field.js';

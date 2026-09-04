@@ -543,6 +543,22 @@ body {
   color: var(--md-sys-color-error);
 }
 
+/* Le champ de recherche : un `md-outlined-text-field`, aligné sur l'échelle de
+   rayons de l'application plutôt que sur la valeur par défaut de la librairie. */
+.gl-report-search {
+  display: block;
+  width: min(100%, 340px);
+  margin-bottom: 12px;
+  --md-outlined-text-field-container-shape: var(--gl-shape-pane);
+  --md-outlined-text-field-outline-color: var(--md-sys-color-outline-variant);
+  --md-outlined-text-field-focus-outline-color: var(--md-sys-color-primary);
+  --md-outlined-text-field-label-text-color: var(--md-sys-color-on-surface-variant);
+  --md-outlined-text-field-input-text-color: var(--md-sys-color-on-surface);
+  --md-outlined-text-field-leading-icon-color: var(--md-sys-color-on-surface-variant);
+  --md-outlined-text-field-top-space: 10px;
+  --md-outlined-text-field-bottom-space: 10px;
+}
+
 /* Filtres : de vraies `md-filter-chip`. `md-chip-set` porte déjà la mise en
    ligne (flex, retour à la ligne, gouttière de 8 dp) — rien à réécrire. */
 .gl-report-filters {

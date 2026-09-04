@@ -21,12 +21,23 @@ export interface FilterChipElement extends HTMLElement {
   selected: boolean;
 }
 
+/** Ce que porte l'événement `input` d'un `md-outlined-text-field`. */
+export interface TextFieldElement extends HTMLElement {
+  value: string;
+}
+
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
       'md-ripple': CustomElementProps<{ disabled?: boolean }>;
       'md-focus-ring': CustomElementProps<{ inward?: boolean }>;
       'md-chip-set': CustomElementProps;
+      'md-outlined-text-field': CustomElementProps<{
+        label?: string;
+        value?: string;
+        type?: string;
+        placeholder?: string;
+      }>;
       'md-linear-progress': CustomElementProps<{
         indeterminate?: boolean;
         value?: number;

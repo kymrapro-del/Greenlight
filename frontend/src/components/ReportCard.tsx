@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { TextFieldElement } from '../custom-elements';
 import { VERDICTS, VERDICT_STYLES, type Verdict } from '../theme/verdicts';
 import { TIER_LABELS, TYPE_LABELS, type Finding, type Report } from '../types';
 import { Icon } from './Icon';
@@ -15,8 +16,24 @@ import { VerdictChip } from './VerdictChip';
  * il garde ses affordances de lecture : filtres par verdict, et une entité qui
  * s'ouvre sur place plutôt que de pousser vers une autre vue.
  */
+/**
+ * Réduit un texte à ce qui se compare : casse, accents et ponctuation sautent.
+ *
+ * Sans ça, chercher « oxycontin » ne trouverait pas « OxyContin », et « paper »
+ * raterait « The Paper Lantern ». Un scénariste tape le nom dont il se souvient,
+ * pas celui qui est écrit.
+ */
+const fold = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
 export function ReportCard({ report }: { report: Report }) {
   const [active, setActive] = useState<Set<Verdict>>(new Set());
+  const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(report.findings[0]?.id ?? null);
 
   const counts = Object.fromEntries(VERDICTS.map((v) => [v, 0])) as Record<Verdict, number>;
@@ -24,10 +41,17 @@ export function ReportCard({ report }: { report: Report }) {
 
   // Le rapport arrive déjà trié par sévérité puis par présence de sources :
   // cet ordre appartient au backend, on filtre sans jamais retrier.
-  const visible =
-    active.size === 0
-      ? report.findings
-      : report.findings.filter((f) => active.has(f.verdict as Verdict));
+  const needle = fold(query);
+  const visible = report.findings.filter((f) => {
+    if (active.size > 0 && !active.has(f.verdict as Verdict)) return false;
+    if (!needle) return true;
+    // Le nom, ses variantes d'écriture, et la catégorie telle qu'elle est
+    // affichée : les trois choses qu'on a sous les yeux quand on cherche.
+    const haystack = fold(
+      [f.name, ...f.aliases, TYPE_LABELS[f.type] ?? f.type].join(' '),
+    );
+    return haystack.includes(needle);
+  });
 
   const toggleFilter = (verdict: Verdict) =>
     setActive((prev) => {
@@ -45,6 +69,20 @@ export function ReportCard({ report }: { report: Report }) {
         <Stat value={report.stats.resolvedByRule} label="sans recherche" />
         <Stat value={report.stats.escalated} label="verdicts remontés" />
       </div>
+
+      {/* Vingt-six entités ne se parcourent pas à l'œil. Le champ ne trie pas et
+          ne réordonne rien : il ne fait que réduire ce qui est déjà là, pour
+          que l'ordre du rapport reste celui du backend. */}
+      {report.findings.length > 8 && (
+        <md-outlined-text-field
+          className="gl-report-search"
+          label="Chercher une entité"
+          value={query}
+          onInput={(e) => setQuery((e.currentTarget as TextFieldElement).value)}
+        >
+          <Icon name="search" size={20} slot="leading-icon" />
+        </md-outlined-text-field>
+      )}
 
       {/* Des filter chips M3, au sens propre : la librairie porte la coche de
           sélection, le `aria-pressed`, la couche d'état et la navigation au
@@ -75,7 +113,11 @@ export function ReportCard({ report }: { report: Report }) {
       </ul>
 
       {visible.length === 0 && (
-        <p className="gl-body-medium gl-empty">Aucune entité ne correspond à ces filtres.</p>
+        <p className="gl-body-medium gl-empty">
+          {needle
+            ? `Aucune entité ne correspond à « ${query.trim()} ».`
+            : 'Aucune entité ne correspond à ces filtres.'}
+        </p>
       )}
     </div>
   );
