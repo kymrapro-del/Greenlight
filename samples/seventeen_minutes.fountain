@@ -1,16 +1,20 @@
 Title: SEVENTEEN MINUTES
 Credit: Written by
 Author: GREENLIGHT test fixture
-Draft date: 2026-09-03
-Notes: Scénario de test. Chaque entité nommée ici est un piège de clearance délibéré, choisi pour couvrir une catégorie du rapport. Les verdicts attendus sont documentés dans samples/EXPECTED.md.
+Draft date: 2026-09-04
+Notes: Scénario de test. Chaque entité nommée ici est un piège de clearance délibéré, choisi pour couvrir une catégorie du rapport — y compris des pièges volontairement inoffensifs, que le système doit classer CLEAR. Les verdicts attendus sont documentés dans samples/EXPECTED.md.
 
 FADE IN:
 
 INT. THE BLACK CAT TAVERN - NIGHT
 
-Low ceilings. A neon sign buzzes behind the bar. DANIEL REYES, 34, sits alone with an untouched beer.
+Low ceilings. A neon sign buzzes behind the bar, half its letters dead. Six stools, four of them empty.
 
-A man slides onto the stool beside him. MARCUS WEBB, 50s, still in surgical scrubs under his coat.
+DANIEL REYES, 34, sits alone with an untouched beer. He has been here long enough that the head has gone flat.
+
+The door opens. Cold air. Daniel does not turn around.
+
+A man slides onto the stool beside him. MARCUS WEBB, 50s, still in surgical scrubs under a good coat.
 
 MARCUS
 You're late.
@@ -18,7 +22,13 @@ You're late.
 DANIEL
 I'm early. You're just impatient.
 
-Marcus sets a padded envelope on the bar. Slides it over. Daniel doesn't touch it.
+MARCUS
+I've been on since six this morning.
+
+DANIEL
+Then you should have said seven.
+
+Marcus sets a padded envelope on the bar. Slides it over with two fingers. Daniel doesn't touch it.
 
 MARCUS
 Forty. Same as last month.
@@ -29,19 +39,46 @@ It was thirty last month.
 MARCUS
 Prices went up. Ask the FDA.
 
-Daniel finally takes the envelope. Slips it inside his jacket.
+DANIEL
+The FDA doesn't set your prices.
+
+MARCUS
+No. It sets how hard it is to get, which is the same thing wearing a nicer coat.
+
+Daniel finally takes the envelope. Weighs it. Slips it inside his jacket without opening it.
 
 DANIEL
 If anyone traces this back to the hospital —
 
 MARCUS
-Nobody traces anything. I sign the charts.
+Nobody traces anything. I sign the charts. I sign the counts. I sign the disposal log at the end of every shift, and the disposal log says what I say it says.
+
+DANIEL
+That's not an answer.
+
+MARCUS
+It's the only answer there is.
+
+He stands. Buttons the coat over the scrubs. Pauses.
+
+MARCUS (CONT'D)
+Seventeen minutes.
+
+DANIEL
+What?
+
+MARCUS
+That's how long a cabinet stays unlocked between the count and the seal. Seventeen minutes, every night, in every hospital in this city. Nobody has ever asked me why.
+
+He leaves. The door swings twice and settles.
+
+Daniel looks at the beer. Still doesn't drink it.
 
 INT. MERCY GENERAL HOSPITAL - EMERGENCY ROOM - CONTINUOUS
 
-Fluorescent hum. A CLERK works a triage desk under a wall clock.
+Fluorescent hum. A CLERK works a triage desk under a wall clock that reads 11:48.
 
-Marcus pushes through the double doors, coat off, badge already clipped.
+Marcus pushes through the double doors, coat off, badge already clipped to his scrubs.
 
 A NURSE intercepts him with a chart.
 
@@ -51,22 +88,119 @@ Bay four's asking for you. Again.
 MARCUS
 Tell bay four I'm a doctor, not a vending machine.
 
-He takes the chart without slowing.
+NURSE
+He's been here since two.
+
+MARCUS
+Then he's had nine hours to get better on his own.
+
+He takes the chart without slowing. Scans it. Signs the bottom without reading the middle.
+
+NURSE
+Doctor Webb.
+
+He stops.
+
+NURSE (CONT'D)
+Pharmacy called. The count's off again.
+
+A beat. Marcus's face does not change.
+
+MARCUS
+By how much?
+
+NURSE
+They didn't say. They said to tell you.
+
+MARCUS
+Then they'll say it to me in the morning, when I'm a person and not a shift.
+
+He walks. The nurse watches him go, one second longer than she needs to.
 
 EXT. HOSPITAL PARKING STRUCTURE - LEVEL 3 - NIGHT
 
-Daniel leans against a grey sedan, plate 7XKD429. He dials a number on a burner.
+Concrete. Sodium light. Half the bays empty.
+
+Daniel leans against a grey sedan, plate 7XKD429. He dials a number on a burner phone.
 
 DANIEL (V.O.)
 It's done. He took it.
 
-The line clicks. Daniel checks the screen: 555-0147.
+The line clicks dead before he finishes. He checks the screen: 555-0147.
 
-He dials a second number from memory: 312-555-8890. It rings once. He hangs up. Wrong one.
+He dials a second number from memory: 312-555-8890. It rings once. He hangs up.
+
+DANIEL (CONT'D)
+Wrong one.
+
+He drops the burner into a storm drain. It doesn't make a sound.
+
+A blue FORD EXPLORER rolls past the end of the row and does not stop. Daniel watches it until the tail lights turn.
+
+INT. WALGREENS - PHARMACY COUNTER - NIGHT
+
+Bright. Empty. A radio somewhere plays something with no words.
+
+Daniel slides a paper script across the counter. The PHARMACIST, 20s, takes it without looking up.
+
+PHARMACIST
+Insurance?
+
+DANIEL
+Cash.
+
+That gets a look. The pharmacist reads the script properly now. Oxycontin, eighty milligrams, quantity ninety.
+
+PHARMACIST
+This is a lot.
+
+DANIEL
+It's what he wrote.
+
+PHARMACIST
+Doctor —
+
+(reading)
+
+— Webb. Mercy General.
+
+DANIEL
+That's him.
+
+The pharmacist types. Waits. Types again. The screen takes its time.
+
+PHARMACIST
+I have to call it in.
+
+DANIEL
+Go ahead.
+
+He doesn't move. Doesn't blink. The pharmacist picks up the phone, dials four digits, and lets it ring twice before hanging up.
+
+PHARMACIST
+Line's busy.
+
+DANIEL
+It's midnight.
+
+PHARMACIST
+Yeah.
+
+She fills it. Staples the bag. Slides it over.
+
+PHARMACIST (CONT'D)
+Have a good night.
+
+DANIEL
+You too.
+
+He leaves. She watches the door for a while after it closes, then writes something on a sticky note and puts it in her pocket.
 
 INT. DANIEL'S APARTMENT - NIGHT
 
-Bare walls. A laptop open on a folding table. Above the desk, a print of Nighthawks, curling at one corner.
+Bare walls. A folding table. A laptop, a lamp, and nothing else that suggests anyone lives here.
+
+Above the desk, a print of Nighthawks, curling at one corner, held with a single pin.
 
 Daniel logs into a webmail client. The address bar reads dreyes@example.com.
 
@@ -75,7 +209,106 @@ He types one line, deletes it, types it again.
 ON SCREEN
 "Seventeen minutes. That's all it took."
 
+He does not send it. He saves it to drafts, closes the laptop, and sits in the dark.
+
 A Coca-Cola can sweats on the windowsill beside him.
+
+On the shelf below: a paperback by Studs Terkel, spine broken, and a Chicago Cubs cap that has clearly never been worn to a game.
+
+INT. MERCY GENERAL HOSPITAL - RECORDS ROOM - DAY
+
+Rows of terminals. Nobody here but Marcus and a hum.
+
+He logs in. Pulls a patient list. Sorts by discharge date.
+
+He opens a chart. Changes one number. Saves. Opens the next.
+
+A DOOR opens behind him. He does not turn.
+
+CLERK (O.S.)
+You're not supposed to be in here alone.
+
+MARCUS
+I'm not alone. You're here.
+
+CLERK
+That's not how the policy reads.
+
+MARCUS
+Then the policy should have said so on the door.
+
+The clerk waits. Marcus keeps working. After a moment the door closes again.
+
+He opens the next chart. Changes one number. Saves.
+
+A terminal two rows over wakes up on its own. Somebody, somewhere, has run a query.
+
+Marcus watches the screen do nothing for eleven seconds. Then he goes back to work.
+
+He opens a chart from fourteen months ago. Reads it properly, for once. A woman's name, an admission date, a discharge that never happened.
+
+He does not change this one. He closes it and sits with his hands on the desk.
+
+MARCUS (V.O.)
+Nobody subtracts. That's the whole thing. Everybody in this building can add — add a dose, add a shift, add a bed — and not one of them has ever sat down with two columns and taken one away from the other.
+
+He logs out. The screen asks whether he is sure. He is.
+
+EXT. 1060 WEST ADDISON STREET - DAY
+
+Under the marquee. Game day traffic, a mounted cop, a man selling ponchos out of a duffel bag.
+
+Daniel waits with his hands in his pockets. He is wearing the Cubs cap now.
+
+ELENA VARGAS, 40s, arrives with two coffees and hands him one without asking.
+
+ELENA
+You picked a stupid place to meet.
+
+DANIEL
+Forty thousand people. Nobody looks at anybody.
+
+ELENA
+Forty thousand people and about nine hundred cameras.
+
+DANIEL
+Pointed at the field.
+
+ELENA
+Pointed at everything.
+
+She drinks. Waits. He doesn't start.
+
+ELENA (CONT'D)
+You called me.
+
+DANIEL
+I know.
+
+ELENA
+So call me.
+
+He takes an envelope out of his jacket. Not the padded one — a plain one, letter size.
+
+DANIEL
+Disposal logs. Fourteen months. Every one of them signed by the same hand.
+
+ELENA
+That's not a story. That's paperwork.
+
+DANIEL
+The counts don't match the logs. Not once. Not in fourteen months.
+
+Elena stops drinking.
+
+ELENA
+Where did you get this?
+
+DANIEL
+Does it matter?
+
+ELENA
+To me, no. To the Reader's lawyers, enormously.
 
 INT. THE BLACK CAT TAVERN - LATER
 
@@ -83,7 +316,7 @@ The bar is empty now. A radio behind the counter plays "Sweet Child O' Mine", ti
 
 The BARTENDER wipes down the counter, watching the door.
 
-Daniel enters. Sits in the same seat. Same untouched beer.
+Daniel enters. Sits in the same seat. Same untouched beer, or one exactly like it.
 
 BARTENDER
 He's not coming back, you know.
@@ -94,14 +327,307 @@ He always comes back.
 BARTENDER
 Not after tonight.
 
+DANIEL
+You don't know him.
+
+BARTENDER
+I know that chair. Thirty years of it.
+
 She slides a folded copy of the Chicago Tribune across the bar. Daniel reads the front page. His face changes.
+
+He reads it twice. Then he folds it, very carefully, along the crease it already had.
+
+DANIEL
+When did this come out?
+
+BARTENDER
+This morning.
+
+DANIEL
+And you waited until now.
+
+BARTENDER
+You came in at eleven. I gave it to you at eleven.
+
+INT. FORD EXPLORER (MOVING) - NIGHT
+
+Daniel drives. Wipers on the slow setting. The city goes by in wet orange.
+
+In the passenger seat, a kid — TOMÁS, 19, in a Blackhawks jersey two sizes too big — holds the pharmacy bag in his lap like it's warm.
+
+TOMÁS
+How much do we get?
+
+DANIEL
+We don't get anything. You get two hundred.
+
+TOMÁS
+That's not what Ray said.
+
+DANIEL
+Ray isn't driving.
+
+Silence. The wipers.
+
+TOMÁS
+My mom worked at Mercy General. Housekeeping. Eleven years.
+
+DANIEL
+I didn't ask.
+
+TOMÁS
+I'm just saying I know the building.
+
+DANIEL
+That's exactly why you're in this car and not in that building.
+
+Tomás looks out the window. The jersey has somebody's number on the back, and it isn't his.
+
+INT. CHICAGO READER - ELENA'S OFFICE - DAY
+
+Glass. Open plan. Somebody's dog asleep under a desk.
+
+Elena has the disposal logs spread across two monitors and half the floor.
+
+A LAWYER, 50s, stands in the doorway with his coat still on.
+
+LAWYER
+Fourteen months of internal documents from a source you won't name.
+
+ELENA
+The documents name themselves. Every page has a signature on it.
+
+LAWYER
+A signature you can't authenticate.
+
+ELENA
+I can authenticate the counts. The counts are public. The state files them.
+
+LAWYER
+That is not the part that worries me.
+
+ELENA
+The last time this paper was sued properly it was over the 1968 Democratic National Convention, and we were right then too.
+
+LAWYER
+Then run the counts and leave the hospital's name out of it.
+
+ELENA
+The hospital's name is the story.
+
+LAWYER
+The hospital's name is a lawsuit.
+
+Elena picks up a page. Holds it up. Does not hand it to him.
+
+ELENA
+Seventeen minutes. Every night. In every hospital in this city, according to the man who wrote this. If that's true, this isn't one hospital, it's a hole in the floor.
+
+LAWYER
+Then find me two hospitals.
+
+INT. MERCY GENERAL HOSPITAL - STAIRWELL - NIGHT
+
+Concrete and green paint. The door two floors up bangs and echoes.
+
+Marcus comes down fast. Daniel is waiting on the landing.
+
+MARCUS
+You don't come here.
+
+DANIEL
+The counts are filed with the state.
+
+MARCUS
+Everything's filed with the state.
+
+DANIEL
+Fourteen months, Marcus. Anybody who subtracts can see it.
+
+Marcus stops on the step above him. Uses the height.
+
+MARCUS
+Nobody subtracts.
+
+DANIEL
+Somebody did.
+
+A long beat. Marcus reads his face and gets there.
+
+MARCUS
+What did you give her?
+
+DANIEL
+Paper. That's all. Paper you left in a bin.
+
+MARCUS
+I shredded that bin.
+
+DANIEL
+On Tuesdays.
+
+Marcus laughs, once, with nothing in it.
+
+MARCUS
+Do you know what happens to you in this? Nothing. You're a name in a paragraph. I'm a photograph.
+
+DANIEL
+Then stop.
+
+MARCUS
+It's too late to stop. It was too late the first night, I just didn't know it for another four hundred.
 
 EXT. 4400 NORTH BROADWAY - DAWN
 
-Daniel stands across the street from a shuttered storefront, hands in his pockets.
+Grey light. A shuttered storefront with paper in the windows.
 
-A CPD cruiser rolls past without slowing.
+Daniel stands across the street, hands in his pockets, no cap.
+
+A CPD cruiser rolls past without slowing. He doesn't watch it go.
 
 He waits until it turns the corner. Then he crosses.
+
+INT. CPD DISTRICT 19 - INTERVIEW ROOM - DAY
+
+Two chairs, a table bolted down, a camera in the corner with a live red light.
+
+DETECTIVE SHAW, 40s, sits across from Daniel with a folder she hasn't opened.
+
+SHAW
+You came in on your own.
+
+DANIEL
+I did.
+
+SHAW
+Nobody does that.
+
+DANIEL
+Then this'll be a short morning for both of us.
+
+She opens the folder. Turns a page around. It's the Tribune front page, the same one, in an evidence sleeve.
+
+SHAW
+You knew him.
+
+DANIEL
+I knew him.
+
+SHAW
+How.
+
+DANIEL
+He was my sister's doctor. Then he wasn't. Then he was something else.
+
+SHAW
+That's three answers and none of them are how.
+
+Daniel looks at the camera. Then back at her.
+
+DANIEL
+Seventeen minutes. Ask him what that means. He'll tell you, he can't help it, it's the only interesting thing he's ever done.
+
+SHAW
+He's not going to tell me anything.
+
+DANIEL
+Why not?
+
+She turns another page around. Daniel reads it. Doesn't move.
+
+A long time passes. The camera's red light does not blink.
+
+SHAW (CONT'D)
+Tuesday night. Where were you.
+
+DANIEL
+Driving.
+
+SHAW
+Where.
+
+DANIEL
+Broadway. North, then south, then north again. I wasn't going anywhere, I was just going.
+
+SHAW
+Anyone with you?
+
+DANIEL
+A kid.
+
+SHAW
+Name.
+
+DANIEL
+He's nineteen and he carried a bag he didn't open. That's the whole of what he did.
+
+SHAW
+That's not a name.
+
+DANIEL
+No. It isn't.
+
+Shaw writes something. Underlines it.
+
+SHAW
+You understand that I can't help you if you decide which parts of this are mine.
+
+DANIEL
+I'm not asking for help.
+
+SHAW
+Then what are you asking for?
+
+Daniel thinks about it longer than she expects.
+
+DANIEL
+For somebody to subtract.
+
+SHAW
+Meaning what?
+
+DANIEL
+The counts are filed with the state. Fourteen months of them. Nobody in this city has ever put the two columns next to each other, and the whole thing has been sitting in a public database the entire time, waiting for somebody to be bored enough.
+
+Shaw closes the folder.
+
+SHAW
+And you were bored enough.
+
+DANIEL
+My sister was.
+
+He looks at the camera again. This time he keeps looking at it.
+
+INT. THE BLACK CAT TAVERN - NIGHT
+
+Later. Weeks later, by the light.
+
+The neon sign has been fixed. All the letters work now, which somehow makes the place look worse.
+
+The BARTENDER pours a beer nobody ordered and sets it on the bar in front of an empty stool.
+
+On the radio, low: "Amazing Grace", sung slow by somebody who means it.
+
+Daniel comes in. Sees the beer. Sits one stool over.
+
+BARTENDER
+That one's not for you.
+
+DANIEL
+I know.
+
+They listen to the radio for a while.
+
+BARTENDER
+Did you say anything? At the thing?
+
+DANIEL
+No.
+
+BARTENDER
+Good.
+
+She goes back to the counter. Daniel sits with the empty stool between them.
 
 FADE OUT.

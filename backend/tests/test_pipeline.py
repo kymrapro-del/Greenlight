@@ -23,21 +23,37 @@ from greenlight.tools.queries import choose_mode, pre_verdict
 # Le faux transport ne rend une entité que si elle apparaît réellement dans la
 # scène demandée : la scène qui la porte n'est donc pas codée en dur ici.
 LANDMINES: list[tuple[str, EntityType, ContextTier]] = [
+    # -- Entités réelles mises en cause par la scène ---------------------
     ("The Black Cat Tavern", EntityType.BUSINESS, ContextTier.ILLEGAL),
     ("Marcus Webb", EntityType.CHARACTER_NAME, ContextTier.ILLEGAL),
     ("Mercy General Hospital", EntityType.INSTITUTION, ContextTier.ILLEGAL),
-    ("312-555-8890", EntityType.PHONE, ContextTier.NEUTRAL),
-    ("555-0147", EntityType.PHONE, ContextTier.NEUTRAL),
+    ("Walgreens", EntityType.BUSINESS, ContextTier.ILLEGAL),
+    ("Oxycontin", EntityType.PRODUCT_BRAND, ContextTier.ILLEGAL),
+    ("Daniel Reyes", EntityType.CHARACTER_NAME, ContextTier.ILLEGAL),
+    # -- Entités réelles dépeintes défavorablement -----------------------
+    ("Ford Explorer", EntityType.VEHICLE, ContextTier.UNFLATTERING),
+    ("Blackhawks", EntityType.SPORTS_TEAM, ContextTier.UNFLATTERING),
+    # -- Entités réelles, usage neutre -----------------------------------
     ("Sweet Child O' Mine", EntityType.SONG, ContextTier.NEUTRAL),
+    ("Amazing Grace", EntityType.SONG, ContextTier.NEUTRAL),
     ("Nighthawks", EntityType.ARTWORK, ContextTier.NEUTRAL),
     ("Chicago Tribune", EntityType.PUBLICATION, ContextTier.NEUTRAL),
-    ("7XKD429", EntityType.LICENSE_PLATE, ContextTier.NEUTRAL),
-    ("4400 North Broadway", EntityType.ADDRESS, ContextTier.NEUTRAL),
-    ("Daniel Reyes", EntityType.CHARACTER_NAME, ContextTier.ILLEGAL),
+    ("Chicago Reader", EntityType.PUBLICATION, ContextTier.NEUTRAL),
+    ("Chicago Cubs", EntityType.SPORTS_TEAM, ContextTier.NEUTRAL),
+    ("Studs Terkel", EntityType.REAL_PERSON, ContextTier.NEUTRAL),
+    ("1968 Democratic National Convention", EntityType.REAL_EVENT, ContextTier.NEUTRAL),
     ("Coca-Cola", EntityType.PRODUCT_BRAND, ContextTier.NEUTRAL),
+    ("4400 North Broadway", EntityType.ADDRESS, ContextTier.NEUTRAL),
+    ("1060 West Addison Street", EntityType.ADDRESS, ContextTier.NEUTRAL),
+    ("7XKD429", EntityType.LICENSE_PLATE, ContextTier.NEUTRAL),
+    # -- Tranchées par convention, sans recherche ------------------------
+    ("312-555-8890", EntityType.PHONE, ContextTier.NEUTRAL),
+    ("555-0147", EntityType.PHONE, ContextTier.NEUTRAL),
     ("dreyes@example.com", EntityType.URL_EMAIL, ContextTier.NEUTRAL),
     ("FDA", EntityType.GOVERNMENT_AGENCY, ContextTier.NEUTRAL),
     ("CPD", EntityType.GOVERNMENT_AGENCY, ContextTier.NEUTRAL),
+    # -- Personnages secondaires -----------------------------------------
+    ("Elena Vargas", EntityType.CHARACTER_NAME, ContextTier.NEUTRAL),
 ]
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
@@ -139,10 +155,21 @@ RAW_CLASSIFICATIONS: dict[str, tuple[str, bool]] = {
     "Mercy General Hospital": ("CAUTION", True),
     "Sweet Child O' Mine": ("LICENSE_REQUIRED", True),
     "Nighthawks": ("LICENSE_REQUIRED", True),
+    "Walgreens": ("CAUTION", True),
+    "Oxycontin": ("CAUTION", True),
+    "Ford Explorer": ("CAUTION", True),
+    "Blackhawks": ("CAUTION", True),
+    "Amazing Grace": ("CLEAR", True),
     "Chicago Tribune": ("CAUTION", True),
+    "Chicago Reader": ("CAUTION", True),
+    "Chicago Cubs": ("CLEAR", True),
+    "Studs Terkel": ("CLEAR", True),
+    "1968 Democratic National Convention": ("CLEAR", True),
     "7XKD429": ("CAUTION", False),
     "4400 North Broadway": ("CAUTION", True),
+    "1060 West Addison Street": ("CAUTION", True),
     "Daniel Reyes": ("CAUTION", False),
+    "Elena Vargas": ("CLEAR", False),
     "Coca-Cola": ("CLEAR", True),
     # Les noms introduits par la réécriture. Ils sont inventés : une recherche
     # réelle ne leur trouve aucun équivalent, donc `CLEAR`. C'est exactement ce
@@ -150,24 +177,42 @@ RAW_CLASSIFICATIONS: dict[str, tuple[str, bool]] = {
     "The Paper Lantern": ("CLEAR", False),
     "Saint Odile Medical Center": ("CLEAR", False),
     "Riverton County Courthouse": ("CLEAR", False),
+    "312-555-0190": ("CLEAR", False),
 }
 
 # La table de samples/EXPECTED.md, vérifiée à la main. Quand le pipeline s'en
 # écarte, c'est le pipeline qui a tort.
 EXPECTED_VERDICTS: dict[str, Verdict] = {
+    # Réelles + mises en cause : la règle de dépiction fait monter le verdict.
     "The Black Cat Tavern": Verdict.CHANGE_RECOMMENDED,
     "Marcus Webb": Verdict.CHANGE_RECOMMENDED,
     "Mercy General Hospital": Verdict.CHANGE_RECOMMENDED,
-    "312-555-8890": Verdict.CHANGE_RECOMMENDED,
-    "555-0147": Verdict.CLEAR,
+    "Walgreens": Verdict.CHANGE_RECOMMENDED,
+    "Oxycontin": Verdict.CHANGE_RECOMMENDED,
+    # Réelles + dépeintes défavorablement : un cran, pas deux.
+    "Ford Explorer": Verdict.CAUTION,
+    "Blackhawks": Verdict.CAUTION,
+    # Licence, quel que soit le contexte : renommer ne règle rien.
     "Sweet Child O' Mine": Verdict.LICENSE_REQUIRED,
     "Nighthawks": Verdict.LICENSE_REQUIRED,
+    # Réelles, usage neutre : signalées sans être dramatisées.
     "Chicago Tribune": Verdict.CAUTION,
+    "Chicago Reader": Verdict.CAUTION,
     "7XKD429": Verdict.CAUTION,
     "4400 North Broadway": Verdict.CAUTION,
+    "1060 West Addison Street": Verdict.CAUTION,
     "Daniel Reyes": Verdict.CAUTION,
-    "CPD": Verdict.CLEAR,
+    # Les contrôles : réelles, incontestables, et pourtant sans risque ici.
     "Coca-Cola": Verdict.CLEAR,
+    "Chicago Cubs": Verdict.CLEAR,
+    "Studs Terkel": Verdict.CLEAR,
+    "1968 Democratic National Convention": Verdict.CLEAR,
+    "Amazing Grace": Verdict.CLEAR,
+    "Elena Vargas": Verdict.CLEAR,
+    # Tranchées par convention professionnelle, sans recherche facturée.
+    "312-555-8890": Verdict.CHANGE_RECOMMENDED,
+    "555-0147": Verdict.CLEAR,
+    "CPD": Verdict.CLEAR,
     "dreyes@example.com": Verdict.CLEAR,
     "FDA": Verdict.CLEAR,
 }
@@ -255,8 +300,16 @@ def test_depiction_rule_moves_exactly_the_entities_it_should(sample_script):
         next(e.canonical_name for e in run.extraction.entities if e.id == f.entity_id)
         for f in run.escalated
     }
-    # Identifiables et mises en scène dans un délit — et elles seules.
-    assert escalated == {"The Black Cat Tavern", "Marcus Webb", "Mercy General Hospital"}
+    # Identifiables ET mises en scène dans un délit — et elles seules. Daniel
+    # Reyes commet le même délit dans la même scène et ne monte pas : les
+    # sources ne désignent aucune personne précise derrière ce nom.
+    assert escalated == {
+        "The Black Cat Tavern",
+        "Marcus Webb",
+        "Mercy General Hospital",
+        "Walgreens",
+        "Oxycontin",
+    }
 
 
 def test_the_control_case_survives_the_whole_pipeline(sample_script):
@@ -325,7 +378,7 @@ def test_clearance_report_leads_with_what_must_change(sample_script):
 V2_ENTITIES: list[tuple[str, EntityType, ContextTier]] = [
     ("The Paper Lantern", EntityType.BUSINESS, ContextTier.ILLEGAL),
     ("Saint Odile Medical Center", EntityType.INSTITUTION, ContextTier.ILLEGAL),
-    ("312-555-0188", EntityType.PHONE, ContextTier.NEUTRAL),
+    ("312-555-0190", EntityType.PHONE, ContextTier.NEUTRAL),
     ("Riverton County Courthouse", EntityType.INSTITUTION, ContextTier.NEUTRAL),
 ]
 
@@ -391,7 +444,7 @@ def test_a_rewrite_only_reanalyzes_what_actually_moved(sample_script, sample_scr
     assert names == {
         "The Paper Lantern",  # renommé
         "Saint Odile Medical Center",  # renommé
-        "312-555-0188",  # numéro corrigé
+        "312-555-0190",  # numéro corrigé
         "Riverton County Courthouse",  # scène ajoutée
         "Chicago Tribune",  # même nom, dépiction devenue délictueuse
     }

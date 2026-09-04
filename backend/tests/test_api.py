@@ -102,10 +102,10 @@ def test_samples_are_served_with_their_real_scene_count(client):
     samples = client.get("/api/samples").json()
     ids = [s["id"] for s in samples]
     assert ids == ["seventeen-minutes", "seventeen-minutes-v2"]
-    assert samples[0]["scenes"] == 6
+    assert samples[0]["scenes"] == 14
     # La réécriture ajoute une scène : le chiffre servi vient du parser, pas
     # d'une constante.
-    assert samples[1]["scenes"] == 7
+    assert samples[1]["scenes"] == 15
     assert samples[1]["previousOf"] == "seventeen-minutes"
 
 
@@ -122,7 +122,7 @@ def test_analysis_streams_its_phases_then_the_report(client):
         )
 
     report = events[-1][1]
-    assert report["stats"]["entities"] == 15
+    assert report["stats"]["entities"] == 26
     assert report["placeholder"] is True  # replay : l'écran doit le dire
     assert report["runId"]
 
@@ -178,4 +178,4 @@ def test_a_question_on_an_expired_run_is_a_404(client):
 def test_a_screenplay_pasted_as_text_runs_like_an_uploaded_file(client, sample_script):
     events = _stream(client, {"text": sample_script.read_text(encoding="utf-8")})
     report = events[-1][1]
-    assert report["stats"]["entities"] == 15
+    assert report["stats"]["entities"] == 26

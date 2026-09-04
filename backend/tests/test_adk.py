@@ -54,7 +54,13 @@ def test_the_agent_preserves_the_depiction_rule(sample_script):
         next(e.canonical_name for e in run.extraction.entities if e.id == f.entity_id)
         for f in run.escalated
     }
-    assert escalated == {"The Black Cat Tavern", "Marcus Webb", "Mercy General Hospital"}
+    assert escalated == {
+        "The Black Cat Tavern",
+        "Marcus Webb",
+        "Mercy General Hospital",
+        "Walgreens",
+        "Oxycontin",
+    }
 
 
 def test_the_agent_runs_the_diff(sample_script, sample_script_v2):

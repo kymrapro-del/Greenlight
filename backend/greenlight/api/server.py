@@ -53,13 +53,13 @@ SAMPLES = [
         "id": "seventeen-minutes",
         "file": "seventeen_minutes.fountain",
         "title": "Seventeen Minutes",
-        "subtitle": "Premier jet — pièges de clearance sur toutes les catégories",
+        "subtitle": "Premier jet — 12 pages, un piège de clearance par catégorie du rapport",
     },
     {
         "id": "seventeen-minutes-v2",
         "file": "seventeen_minutes_v2.fountain",
         "title": "Seventeen Minutes — réécriture",
-        "subtitle": "Deux entités renommées, un numéro corrigé, une scène ajoutée",
+        "subtitle": "Deux entités renommées, un numéro corrigé, une scène ajoutée, un journal redépeint",
         "previousOf": "seventeen-minutes",
     },
 ]

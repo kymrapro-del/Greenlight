@@ -69,7 +69,7 @@ seconds instead of minutes. This is what turns clearance into CI.
 A phone number in the 555-0100–555-0199 range is reserved for fiction by the
 North American Numbering Plan — `CLEAR` by rule, no network call. Same for
 RFC 2606 domains and government agencies named neutrally. On the test
-screenplay this settles **5 of 15 entities** before a single request is billed.
+screenplay this settles **5 of 26 entities** before a single request is billed.
 
 **A hallucinated entity never costs a search.**
 Any entity the model returns that does not appear verbatim in the scene text is
@@ -137,11 +137,12 @@ it matters.
 
 Two numbers, and the difference between them is deliberate.
 
-**Measured, on the test screenplay:** 15 canonical entities, 5 settled by
-rule with no billed request, 10 researched, 3 verdicts escalated by the depiction
-rule, 6 hallucinated entities dropped before the fan-out. On the rewrite, the
-diff re-analyses 5 of 16 entities and reuses 11 verdicts — **68 % of the research
-skipped**. Reproduce it with the commands below; it costs nothing in `replay`.
+**Measured, on the 12-page test screenplay:** 26 canonical entities across 14
+scenes, 5 settled by rule with no billed request, 21 researched, 5 verdicts
+escalated by the depiction rule, 14 hallucinated entities dropped before the
+fan-out. On the rewrite, the diff re-analyses 5 of 27 entities and reuses 22
+verdicts — **81 % of the research skipped**. Reproduce it with the commands
+below; it costs nothing in `replay`.
 
 **Projected, for a 100-page screenplay** (~180 entities, extrapolated from the
 per-entity mode split above): roughly **\$0.20** of Parallel search. Against
@@ -249,17 +250,18 @@ short screenplay written for this project and deliberately seeded with clearance
 landmines covering every report category — including one **intentionally
 harmless** trap the system must return as `CLEAR`.
 
-It is six scenes, about three pages by the parser's own estimate: dense enough
-to hold fifteen landmines, short enough that a full pass costs almost nothing to
-re-run. It is a test fixture, not a feature film, and it is described that way
-rather than inflated.
+Fourteen scenes, twelve pages by the parser's own estimate: long enough to hold
+twenty-six landmines across every category the report knows about, short enough
+that a full pass costs almost nothing to re-run. It is a test fixture, not a
+feature film, and it is described that way rather than inflated.
 
 That last one matters: it is the proof the system reasons about context instead
 of painting everything red.
 
 Expected verdicts: [`samples/EXPECTED.md`](samples/EXPECTED.md). Every one of the
-15 hand-verified verdicts is reproduced by the pipeline, and the depiction rule
-escalates exactly the three entities it should.
+26 hand-verified verdicts is reproduced by the pipeline, and the depiction rule
+escalates exactly the five entities it should — not the sixth, which commits the
+same crime in the same scene under a name no source can pin down.
 
 [`samples/seventeen_minutes_v2.fountain`](samples/seventeen_minutes_v2.fountain)
 is the rewrite a writer would actually produce — two entities renamed, a phone

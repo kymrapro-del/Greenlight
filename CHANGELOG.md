@@ -98,12 +98,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   server did not answer.
 
 ### Verified
-- On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
-  hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
-  entities the depiction rule should touch, and leaves the Coca-Cola control
-  case `CLEAR`. On the rewrite, 5 of 16 entities are re-analysed and 68 % of the
-  research is skipped. 141 tests, all offline: no token and no credit spent
-  in CI. On the interface, the Material Web components are checked as actually
+- On `samples/seventeen_minutes.fountain` — 12 pages, 14 scenes, 26 entities —
+  the pipeline reproduces all 26 hand-verified verdicts in `samples/EXPECTED.md`,
+  escalates exactly the five entities the depiction rule should touch, and leaves
+  every control case `CLEAR`: Coca-Cola, a Cubs cap, a public-domain hymn, a real
+  author on a shelf, a historical event in dialogue. On the rewrite, 5 of 27
+  entities are re-analysed and 81 % of the research is skipped. 152 tests, all
+  offline: no token and no credit spent in CI. On the interface, the Material Web components are checked as actually
   upgraded in the browser: press state layer, focus ring on `:focus-visible`,
   and selectable filter chips. The whole chat flow is driven end to end in a
   browser against the real server — analysis, streamed phases, report, follow-up

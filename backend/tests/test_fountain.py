@@ -9,8 +9,10 @@ def test_parses_title_page(sample_script):
 
 def test_scene_count_and_order(sample_script):
     draft = parse_file(sample_script)
-    assert len(draft.scenes) == 6
-    assert [s.number for s in draft.scenes] == [1, 2, 3, 4, 5, 6]
+    assert len(draft.scenes) == 14
+    # La numérotation suit l'ordre du script, sans trou : c'est elle que le
+    # rapport cite pour renvoyer le scénariste à la bonne page.
+    assert [s.number for s in draft.scenes] == list(range(1, 15))
 
 
 def test_heading_decomposition(sample_script):
