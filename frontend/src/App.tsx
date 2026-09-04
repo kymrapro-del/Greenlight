@@ -473,7 +473,7 @@ function TurnView({ turn, live }: { turn: Turn; live: boolean }) {
           <Icon name="science" size={16} />
           <span>{live
             ? 'Passe réelle, mais le serveur la signale comme non validée.'
-            : 'Le serveur rejoue des recherches enregistrées plutôt que d’appeler les API : les phases sont réelles, les sources viennent du disque.'}</span>
+            : 'Le serveur ne joint pas les API : les huit phases tournent pour de vrai, les sources viennent du disque.'}</span>
         </p>
       )}
 

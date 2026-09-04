@@ -62,4 +62,7 @@ def build_clients() -> tuple[GeminiClient, ScriptedSearch]:
 
 
 server.build_clients = build_clients
+# Les transports sont scriptés : `/api/health` doit le dire, plutôt que de
+# compter les fixtures sur disque et annoncer une panne qui n'existe pas.
+server.SCRIPTED_TRANSPORTS = True
 app = server.app

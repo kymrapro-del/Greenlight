@@ -20,7 +20,8 @@ export interface Health {
   status: string;
   /** Vrai quand l'instance appelle réellement Gemini et Parallel. */
   live: boolean;
-  fixtureMode: 'live' | 'record' | 'replay';
+  /** `scripted` n'apparaît que sur le serveur du test de bout en bout. */
+  fixtureMode: 'live' | 'record' | 'replay' | 'scripted';
   credentials: boolean;
   fixtures: { gemini: number; parallelSearch: number };
   /**

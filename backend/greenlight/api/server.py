@@ -120,6 +120,14 @@ def build_clients() -> tuple[GeminiClient, ParallelSearch]:
     return GeminiClient(), ParallelSearch()
 
 
+# Vrai uniquement quand un serveur de test a remplacé `build_clients` par des
+# transports scriptés. Le paquet livré ne le passe jamais à vrai : il n'existe
+# que pour que `/api/health` dise la vérité au lieu d'annoncer une panne à un
+# serveur qui, lui, sait répondre. Un mode « démonstration » qui fabriquerait
+# des verdicts serait une autre chose, et il n'y en a pas.
+SCRIPTED_TRANSPORTS = False
+
+
 def _live_mode() -> bool:
     """Vrai quand cette instance appelle réellement les API."""
     return settings.fixture_mode in {"live", "record"}
@@ -141,10 +149,10 @@ def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "live": live,
-        "fixtureMode": settings.fixture_mode,
+        "fixtureMode": "scripted" if SCRIPTED_TRANSPORTS else settings.fixture_mode,
         "credentials": credentials,
         "fixtures": fixtures,
-        "canAnalyze": live or fixtures["gemini"] > 0,
+        "canAnalyze": live or SCRIPTED_TRANSPORTS or fixtures["gemini"] > 0,
         "models": {"extract": settings.model_extract, "classify": settings.model_classify},
         "runsHeld": len(store),
     }

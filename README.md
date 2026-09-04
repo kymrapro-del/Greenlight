@@ -2,21 +2,45 @@
 
 # 🟢 GREENLIGHT
 
-**Automated pre-clearance for screenplays.**
-Catch the legal landmines in a script *while they are still free to fix*.
+### Automated pre-clearance for screenplays
+
+**Catch the legal landmines in a script *while they are still free to fix*.**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB.svg?logo=python&logoColor=white)](pyproject.toml)
 [![CI](https://github.com/kymrapro-del/Greenlight/actions/workflows/ci.yml/badge.svg)](https://github.com/kymrapro-del/Greenlight/actions/workflows/ci.yml)
-[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Gemini%20%2B%20Vertex%20AI-4285F4.svg?logo=googlecloud&logoColor=white)](https://cloud.google.com/vertex-ai)
+[![Tests](https://img.shields.io/badge/tests-152%20offline-2e7d32.svg)](backend/tests)
+[![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Gemini%20%2B%20ADK-4285F4.svg?logo=googlecloud&logoColor=white)](https://cloud.google.com/vertex-ai)
 [![Parallel](https://img.shields.io/badge/Parallel-Search%20API-000000.svg)](https://docs.parallel.ai/search/search-quickstart)
+[![Material 3](https://img.shields.io/badge/Material%203-%40material%2Fweb-6750A4.svg)](https://m3.material.io)
 [![Hackathon](https://img.shields.io/badge/Agentic%20Cinema-Parallel%20track-E4405F.svg)](https://agentic-cinema.devpost.com)
+
+<br />
+
+<img src="docs/screenshots/03-report.png" alt="The clearance report, rendered inside the assistant's answer" width="820" />
+
+<sub>A clearance report, rendered inside the answer. Twenty-six entities, five escalated by how the scene depicts them.</sub>
 
 </div>
 
 ---
 
-## The problem nobody codes for
+## ⚡ At a glance
+
+| | |
+|---|---|
+| 🎬 **What it does** | Reads a screenplay, finds every named entity, checks each against the live web, and returns a sourced clearance report |
+| ⏱️ **Instead of** | ~1 week and several thousand dollars, once, on the locked script |
+| 🧠 **The core idea** | The *same* real entity gets a different verdict depending on what the scene does with it |
+| 🔁 **Why it scales** | Draft-to-draft diff re-analyses only what moved — **81 % of the research skipped** on the test rewrite |
+| 🤖 **Models** | Gemini via `google-genai`, orchestrated with a native **ADK `Workflow`** |
+| 🌐 **Search** | **Parallel Search API**, risk-routed: `fast` in bulk, `advanced` only where the verdict is in play |
+| 🎨 **Interface** | A conversation, in **Material 3** — one source colour generates the whole theme |
+| 💸 **Cost in CI** | Zero. Every test replays recorded responses |
+
+---
+
+## 🎬 The problem nobody codes for
 
 Before a film can be shot, the production must obtain a **script clearance
 report**. Without it there is no E&O insurance, and without insurance no
@@ -33,7 +57,7 @@ That takes roughly a week and costs several thousand dollars per script.
 renaming a bar means rebuilding set dressing, remaking props, and re-recording
 ADR. So productions negotiate, take risks, or pay for a licence.
 
-## The idea: shift clearance left
+## 💡 The idea: shift clearance left
 
 Software security moved from the end-of-cycle pentest to a linter in the
 editor. Screenplay clearance never made that move.
@@ -48,42 +72,115 @@ fast enough and cheap enough to run on **every draft**, not once at the end.
 
 ---
 
-## Why this is not "an LLM with web search"
+## 🧠 Why this is not "an LLM with web search"
 
-**Depiction context is the risk multiplier.**
+Six mechanisms, each of which changes a verdict or a bill.
+
+### 1 · Depiction context is the risk multiplier
+
 Naming a real bar is harmless. The *same* bar where a character deals drugs is
-defamation exposure. GREENLIGHT assigns a different verdict to the same entity
-depending on what the scene does with it — a judgement that requires reading the
-scene, not matching a string.
+defamation exposure. Existence and depiction are two separate signals, combined
+by one explicit, testable function.
 
-**Replacements are re-verified.**
+| Entity | Real? | What the scene does | Verdict |
+|---|:---:|---|:---:|
+| Coca-Cola | ✅ | a can on a windowsill | 🟩 `CLEAR` |
+| Chicago Cubs | ✅ | a cap on a shelf | 🟩 `CLEAR` |
+| Blackhawks | ✅ | jersey worn during an offence | 🟨 `CAUTION` |
+| Walgreens | ✅ | fills a forged prescription | 🟥 `CHANGE_RECOMMENDED` |
+
+A system that flags Coca-Cola has learned *real ⇒ risky* instead of reasoning
+about the scene. That control case is in the fixture on purpose.
+
+### 2 · Identifiability gates escalation
+
+Two ordinary names commit the same crime in the same scene. Only one escalates.
+
+| Entity | Sources point to a specific person? | Verdict |
+|---|:---:|:---:|
+| Marcus Webb | ✅ real physicians match | 🟨 → 🟥 `CHANGE_RECOMMENDED` |
+| Daniel Reyes | ❌ common name, no match | 🟨 `CAUTION` |
+
+Escalating on the word "crime" alone would flag every protagonist in cinema.
+
+### 3 · Replacements are re-verified
+
 When an entity must change, the system generates an alternative, **searches for
-it in turn**, and only proposes it once it returns nothing real. A suggestion
-that has not been cleared is not a suggestion.
+it in turn**, and only marks it verified once nothing real comes back. An
+unverifiable candidate is still offered — and labelled as such.
 
-**Diff mode makes per-draft runs viable.**
-Draft v2 against v1: only changed entities are re-researched. Second pass in
-seconds instead of minutes. This is what turns clearance into CI.
+Phone numbers and e-mail addresses take the professional convention
+(555-01XX, RFC 2606) with **no model call and no search**. And nothing is
+suggested where renaming would be bad advice: a song under copyright needs a
+licence, not a new title.
 
-**Deterministic pre-verdicts cost nothing.**
-A phone number in the 555-0100–555-0199 range is reserved for fiction by the
-North American Numbering Plan — `CLEAR` by rule, no network call. Same for
-RFC 2606 domains and government agencies named neutrally. On the test
-screenplay this settles **5 of 26 entities** before a single request is billed.
+### 4 · Citations are verified, not trusted
 
-**A hallucinated entity never costs a search.**
-Any entity the model returns that does not appear verbatim in the scene text is
-dropped before the fan-out. Deterministic, free, and it removes the worst
-failure mode: paying to research a name the writer never wrote.
-
-**Citations are verified, not trusted.**
 Cited URLs absent from the search results are discarded, and any adverse verdict
-left with no verifiable source falls back to `UNRESOLVED`. An unsourced
-accusation is not a clearance finding.
+left with no verifiable source falls back to `UNRESOLVED`. **An unsourced
+accusation is not a clearance finding.**
+
+### 5 · Nothing is paid for twice
+
+| Guard | Effect on the test screenplay |
+|---|---|
+| Deterministic pre-verdicts (555-01XX, RFC 2606, neutral agencies) | **5 of 26** entities settled with no request |
+| Anti-hallucination: an entity absent verbatim from the scene is dropped | **14** entities never reach the billed queue |
+| Global entity cache across drafts and projects | repeat lookups cost nothing |
+| Risk-routed depth: `fast` \$1/1 000, `advanced` \$5/1 000 | 5× cheaper across the bulk of the fan-out |
+
+### 6 · Diff mode turns clearance into CI
+
+A verdict is reused **only** when the entity, its worst depiction, *and* the
+prompt version are all unchanged. An entity kept under the same name but newly
+implicated in a crime is re-analysed — that is exactly the case a naive cache
+carries over in silence.
+
+<div align="center">
+<img src="docs/screenshots/04-detail.png" alt="An entity opened: the escalation trace, the re-verified replacement, sources and occurrences" width="820" />
+<br /><sub>The escalation trace, the re-verified replacement, the sources, and every scene the entity appears in.</sub>
+</div>
 
 ---
 
-## Pipeline
+## 🗺️ How it works
+
+```
+   screenplay (.fountain / .fdx)
+        │
+        ▼
+ ┌──────────────────┐
+ │ 1  INGEST        │  code · scenes, headings, dialogue, page estimate
+ └────────┬─────────┘
+          ▼
+ ┌──────────────────┐   one scene = one call, in parallel
+ │ 2  EXTRACT       │  🤖 Gemini Flash · entity **and** depiction tier
+ └────────┬─────────┘   ⛔ absent from the scene text → dropped, unbilled
+          ▼
+ ┌──────────────────┐
+ │ 3  CANONICALIZE  │  code · alias resolution, stable ids
+ └────────┬─────────┘
+          ▼
+ ┌──────────────────┐   ⚡ rules first → cache → billed queue
+ │ 4  RESEARCH      │  🌐 Parallel Search · fan-out, depth per entity
+ └────────┬─────────┘
+          ▼
+ ┌──────────────────┐   judges only from the excerpts it was given
+ │ 5  CLASSIFY      │  🤖 Gemini Pro · verdict + rationale + citations
+ └────────┬─────────┘   ⛔ unsourced adverse verdict → UNRESOLVED
+          ▼
+ ┌──────────────────┐
+ │ 6  SUGGEST       │  🤖 + 🌐 generate → search again → verify
+ └────────┬─────────┘
+          ▼
+ ┌──────────────────┐
+ │ 7  REPORT        │  code · sorted by severity, then by having a source
+ └────────┬─────────┘
+          ▼
+ ┌──────────────────┐
+ │ 8  DIFF          │  code · reuse only what genuinely did not move
+ └──────────────────┘
+```
 
 | # | Phase | Engine | Deterministic |
 |---|-------|--------|:---:|
@@ -107,73 +204,57 @@ temperature 0 returns three variants of the same name, so it runs warmer; the
 verification pass that follows is what makes the suggestion trustworthy, not the
 sampling temperature.
 
-### Verdicts
+### The five verdicts
 
-| Verdict | Meaning |
-|---|---|
-| `CLEAR` | No real-world collision, or protected use. |
-| `CAUTION` | Real entity exists; depiction is defensible but worth a look. |
-| `CHANGE_RECOMMENDED` | Real entity + unflattering or illegal depiction. |
-| `LICENSE_REQUIRED` | Rights holder identified; clearance must be purchased. |
-| `UNRESOLVED` | Insufficient evidence. Surfaced honestly, never guessed. |
+| | Verdict | Meaning | What the writer does |
+|:---:|---|---|---|
+| 🟥 | `CHANGE_RECOMMENDED` | Real entity + unflattering or illegal depiction | Rename it now, while it is free |
+| 🟪 | `LICENSE_REQUIRED` | Rights holder identified | Buy the licence, or cut it — renaming solves nothing |
+| 🟨 | `CAUTION` | Real entity exists; depiction defensible but worth a look | Read it again before locking |
+| ⬜ | `UNRESOLVED` | Insufficient evidence | Check it by hand |
+| 🟩 | `CLEAR` | No collision, or protected use | Nothing |
 
-`UNRESOLVED` is a first-class verdict. A clearance tool that claims certainty it
-does not have is worse than no tool.
+`UNRESOLVED` is a first-class verdict. **A clearance tool that claims certainty
+it does not have is worse than no tool.**
 
 ---
 
-## Risk-routed search
-
-Parallel pricing: `fast` at **\$1 / 1 000 requests**, `advanced` at **\$5 / 1 000**.
-
-`fast` is enough to establish whether a neutrally-mentioned entity exists.
-`advanced` is spent only where the verdict is genuinely in play — entities shown
-unflatteringly, or high-exposure categories (songs, artworks, real people).
-
-Five times cheaper across the bulk of the fan-out, with no loss of quality where
-it matters.
-
-### What is actually measured
+## 📊 What is actually measured
 
 Two numbers, and the difference between them is deliberate.
 
-**Measured, on the 12-page test screenplay:** 26 canonical entities across 14
-scenes, 5 settled by rule with no billed request, 21 researched, 5 verdicts
-escalated by the depiction rule, 14 hallucinated entities dropped before the
-fan-out. On the rewrite, the diff re-analyses 5 of 27 entities and reuses 22
-verdicts — **81 % of the research skipped**. Reproduce it with the commands
-below; it costs nothing in `replay`.
+### 🟢 Measured — 12-page test screenplay, 14 scenes
 
-**Projected, for a 100-page screenplay** (~180 entities, extrapolated from the
-per-entity mode split above): roughly **\$0.20** of Parallel search. Against
-roughly a week and several thousand dollars for a manual clearance pass.
+| Metric | Value |
+|---|---:|
+| Canonical entities | **26** |
+| Need a decision before the shoot | 16 |
+| Settled by rule, no billed request | 5 |
+| Verdicts escalated by the depiction rule | 5 |
+| Hallucinated entities dropped before the fan-out | 14 |
+| **Rewrite: entities re-analysed** | **5 of 27** |
+| **Rewrite: research skipped** | **81 %** |
 
-The projection is labelled as such on purpose. A measured figure for a
-feature-length script requires a feature-length run, and this README will carry
-one only once that run has happened.
+Reproduce it with the commands below; it costs nothing in `replay`.
+
+### 🔵 Projected — 100-page feature
+
+~180 entities, extrapolated from the per-entity mode split above: roughly
+**\$0.20** of Parallel search. Against roughly a week and several thousand
+dollars for a manual clearance pass.
+
+> A dollar figure is printed **only** when per-million token prices are supplied
+> in the environment. Until then the pipeline reports tokens and no dollars —
+> an invented number would be worse than no number.
 
 ---
 
-## Quick start
+## 🚀 Quick start
+
+### The pipeline, from the command line
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements.txt
-```
-
-**The test suite and the report screen run fully offline** — no key, no credits,
-no network:
-
-```bash
-.venv/bin/python -m pytest          # 127 tests, all offline
-```
-
-**The pipeline CLI needs credentials for its first run.** Model responses are
-replayed from disk, and this repository ships no recorded Gemini fixtures — a
-recording of somebody's API responses is not something to commit blindly. Set up
-`.env`, record once, and every later run is free:
-
-```bash
+python -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
 cp .env.example .env                # GOOGLE_API_KEY or GOOGLE_CLOUD_PROJECT
                                     # + PARALLEL_API_KEY
 
@@ -196,8 +277,8 @@ than reporting an empty success.
 
 ### The product
 
-Two processes: the API runs the pipeline, the interface talks to it. Nothing is
-pre-computed and no report is committed — the screen shows what the server
+Two processes: the API runs the pipeline, the interface talks to it. **Nothing
+is pre-computed and no report is committed** — the screen shows what the server
 actually returned, or says the server did not answer.
 
 ```bash
@@ -213,7 +294,7 @@ npm run dev          # proxies /api to localhost:8000
 
 | Route | What it does |
 | --- | --- |
-| `GET /api/health` | whether this instance really calls Gemini and Parallel, or replays fixtures |
+| `GET /api/health` | whether this instance really calls Gemini and Parallel, how many calls it can replay, and whether it can analyse anything at all |
 | `GET /api/samples` | the screenplays shipped with the repo, with their real scene counts |
 | `POST /api/analyze` | a screenplay in, the eight phases run, **the progress streams back** phase by phase over SSE, the report is the last event |
 | `GET /api/runs/{id}` | a completed pass, so a thread survives a reload |
@@ -228,7 +309,20 @@ An analysis where every scene fails comes back as an error naming the cause, not
 as a report with zero entities. Those two are indistinguishable to a reader, and
 one of them is a lie about a screenplay full of landmines.
 
-### Offline fixture harness
+### The test suite
+
+```bash
+.venv/bin/python -m pytest        # 152 tests, no network, no credits
+cd frontend && npm run e2e        # 5 browser journeys × 2 widths
+```
+
+The browser suite drives the production bundle against the real server, with
+only the two outbound transports scripted — from the **test tree**, never the
+shipped package. It catches what no unit test can: a custom element that stopped
+registering, progress that no longer streams, a search that quietly reorders, a
+drawer that traps a phone user.
+
+### 🧪 Offline fixture harness
 
 Credits are finite. `FIXTURE_MODE` prevents paying twice for identical calls:
 
@@ -243,20 +337,17 @@ so **CI is free and deterministic**.
 
 ---
 
-## Test screenplay
+## 🎥 Test screenplay
 
 [`samples/seventeen_minutes.fountain`](samples/seventeen_minutes.fountain) is a
 short screenplay written for this project and deliberately seeded with clearance
-landmines covering every report category — including one **intentionally
-harmless** trap the system must return as `CLEAR`.
+landmines across every category the report knows about — including several
+**intentionally harmless** traps the system must return as `CLEAR`.
 
 Fourteen scenes, twelve pages by the parser's own estimate: long enough to hold
-twenty-six landmines across every category the report knows about, short enough
-that a full pass costs almost nothing to re-run. It is a test fixture, not a
-feature film, and it is described that way rather than inflated.
-
-That last one matters: it is the proof the system reasons about context instead
-of painting everything red.
+twenty-six landmines, short enough that a full pass costs almost nothing to
+re-run. It is a test fixture, not a feature film, and it is described that way
+rather than inflated.
 
 Expected verdicts: [`samples/EXPECTED.md`](samples/EXPECTED.md). Every one of the
 26 hand-verified verdicts is reproduced by the pipeline, and the depiction rule
@@ -271,7 +362,26 @@ so it is the one the diff has to catch.
 
 ---
 
-## Interface — Material 3
+## 🎨 Interface — Material 3
+
+<div align="center">
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/01-welcome.png" alt="The welcome state" /><br /><sub>Two bundled screenplays. Each one starts a real pass.</sub></td>
+<td width="50%"><img src="docs/screenshots/02-running.png" alt="A pass in progress" /><br /><sub>The phases appear as the server announces them.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/05-answer.png" alt="A follow-up question answered from the report" /><br /><sub>Follow-ups are answered from that report and nothing else.</sub></td>
+<td><img src="docs/screenshots/06-dark.png" alt="The same report in the dark scheme" /><br /><sub>Both schemes come from the same source colour.</sub></td>
+</tr>
+</table>
+</div>
+
+**The interface is a conversation**, on the pattern of Gemini: a history pane, a
+prompt composer, and answers in the thread. The clearance report is rendered
+*inside* the answer rather than on a separate screen — that is how an assistant
+returns a structured result, and the verdicts keep their reading affordances
+without leaving the thread.
 
 One source colour (`#1B7F3B`, the studio green light) generates the six tonal
 palettes and both schemes through `@material/material-color-utilities`. No
@@ -281,42 +391,46 @@ changing that one colour recolours the whole screen.
 Verdicts map to M3 colour **roles**, never to raw hex — `error-container` for
 *change recommended*, `tertiary-container` for *clear*, and a harmonised custom
 `warning` role for *caution*, since M3 defines no warning role of its own.
-Contrast is guaranteed by construction, because M3 computes every
-`container` / `on-container` pair to meet the thresholds.
+Contrast is guaranteed by construction.
 
-**The interface is a conversation**, on the pattern of Gemini: a history pane, a
-prompt composer, and answers in the thread. The clearance report is rendered
-*inside* the answer rather than on a separate screen — that is how an assistant
-returns a structured result, and the verdicts keep their reading affordances
-without leaving the thread.
+### What comes from the library, and what does not
 
-**What comes from the library, and what does not.** `@material/web` is in
-maintenance mode and ships twenty components — no card, no chat composer, no
-navigation drawer. So the shell (drawer, composer, turns, report) is built from
-M3 **design tokens**, and the library is used where it actually has the
-component:
+`@material/web` is in maintenance mode and ships twenty components — no card, no
+chat composer, no navigation drawer. So the shell is built from M3 **design
+tokens**, and the library is used where it actually has the component:
 
-| Used | Why the library rather than hand-rolled |
+| Component | Why the library rather than hand-rolled |
 | --- | --- |
 | `md-ripple` | The full M3 state layer. A hand-written `::after` does hover and focus, but not the press wave — it starts at the contact point, is sized from the container, and takes three times longer to leave than to arrive. |
 | `md-focus-ring` | The focus ring with its grow animation, shown on `:focus-visible` only, so never after a mouse click. |
-| `md-filter-chip` | The verdict filters *are* M3 filter chips: same role, same `aria-pressed`, same check mark on selection. |
+| `md-chip-set` + `md-filter-chip` | The verdict filters *are* M3 filter chips: same role, same `aria-pressed`, same check mark on selection. |
+| `md-linear-progress` | A pass in progress, indeterminate — the server knows which phase it is in, not how long is left. |
+| `md-outlined-text-field` | The entity search. Floating label, notched outline, focus handling. |
 
-Said plainly because a reader who knows the library will notice, and the shape
-of the gap is worth knowing. Nothing is imported to pad the list: `md-divider`
-is not used because the layout has no rule to draw.
+Nothing is imported to pad the list: `md-divider` is not used, because the
+layout has no rule to draw.
 
 Icons are inline SVG rather than the Material Symbols font: a webfont that fails
 to load renders the icon's *name* as literal text across the interface. The
 screenshots in this repository were taken with Google Fonts unreachable.
 
-The corner radius scale carries all ten steps, including the three added by M3
-Expressive that the library does not yet ship — an opened entity morphs to a
-wider radius, so the report signals what is open independently of colour.
+### Adaptive, per the window size classes
+
+<div align="center">
+<img src="docs/screenshots/07-phone.png" alt="The report on a phone" width="300" />
+</div>
+
+| Class | Width | Drawer |
+|---|---|---|
+| Compact / Medium | < 840 dp | **modal** — overlays, dims behind a scrim, closes on a tap outside |
+| Expanded | ≥ 840 dp | **permanent**, beside the content |
+
+No navigation rail: M3 expects one for three to seven destinations, and this app
+has one. A rail with a single button would be decoration.
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 **What runs today** — a Python service plus a Material 3 interface that talks to it:
 
@@ -334,15 +448,20 @@ backend/greenlight/
    agents/classify   Gemini · sourced verdicts                 phase 5
    agents/replace    generate → re-verify replacement          phase 6
    agents/diff       reuse verdicts across drafts              phase 8
+   agents/ask        grounded follow-up questions
    api/report        pipeline → the report the screen consumes phase 7
+   adk/              the same eight phases as an ADK Workflow
    tools/            fixtures, entity cache, query strategy
 ```
 
 **Where it is designed to run** — the Cloud Run topology, VPC, Cloud Tasks
 fan-out, Firestore schema and IAM are specified in
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). That deployment is designed and
-documented, not built: the pipeline currently runs in-process, with a bounded
-thread pool where the cloud design uses Cloud Tasks.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), where every section is marked
+🟢 built, 🔵 designed or ⚪ cut. That deployment is designed and documented, not
+built: the pipeline currently runs in-process, with a bounded thread pool where
+the cloud design uses Cloud Tasks.
+
+### Native ADK
 
 The eight phases are also packaged as a native **Agent Development Kit**
 pipeline in `backend/greenlight/adk/`, deployable to Vertex AI Agent Engine:
@@ -366,13 +485,28 @@ orchestration.
 
 The ADK layer reimplements nothing — every phase delegates to the same function
 the library uses, and a test asserts the two execution paths return identical
-verdicts. The model layer underneath is `google-genai` calling Gemini with
-strict structured output on every call. No third-party wrapper framework, and no
-non-Google model anywhere in the product.
+verdicts. **No third-party wrapper framework, and no non-Google model anywhere
+in the product.**
 
 ---
 
-## Versioning & releases
+## ✅ Status
+
+| | |
+|:---:|---|
+| 🟢 | Fountain / FDX ingest, all eight phases, ADK layer, HTTP API, Material 3 interface |
+| 🟢 | 152 offline tests + 10 browser journeys, green in CI, zero credits spent |
+| 🟢 | Public repo, Apache 2.0, no non-Google AI SDK anywhere |
+| 🟡 | `google-genai` is imported and called, but **no Gemini fixture has been recorded yet** — the live path awaits credentials |
+| 🔴 | Not yet deployed to a public URL |
+
+`/api/health` says which of these is true of a running instance, and the
+interface prints it on screen. A demo that let you believe it was calling live
+APIs while replaying a disk would be lying about the only thing that matters.
+
+---
+
+## 📦 Versioning & releases
 
 This project follows [Semantic Versioning](https://semver.org) and
 [Keep a Changelog](https://keepachangelog.com).
@@ -382,12 +516,12 @@ This project follows [Semantic Versioning](https://semver.org) and
 - Releases are git tags `vX.Y.Z`
 
 **`main` is the production branch. Every push to `main` deploys.**
-CI runs lint and the offline test suite on every push and pull request; a green
-run on `main` triggers the Cloud Run deployment.
+CI runs lint, the offline suite and the browser suite on every push and pull
+request; a green run on `main` triggers the Cloud Run deployment.
 
 ---
 
-## Scope, stated honestly
+## ⚖️ Scope, stated honestly
 
 GREENLIGHT **does not replace** the official clearance report required by an E&O
 insurer, and it is not legal advice.
@@ -395,9 +529,13 @@ insurer, and it is not legal advice.
 It is upstream triage: catch problems during writing, when the fix is free, and
 hand the clearance vendor a script that is already clean.
 
+That sentence is in the README, on the screen under the composer, and in the
+video. A scope you own is defensible; an inflated promise comes apart in one
+question from the jury.
+
 ---
 
-## License
+## 📄 License
 
 [Apache 2.0](LICENSE)
 
