@@ -293,24 +293,44 @@ def main(argv: list[str] | None = None) -> int:
         help="version précédente : seules les entités réellement touchées sont réanalysées",
     )
     parser.add_argument(
+        "--adk",
+        action="store_true",
+        help="exécute le pipeline via le runtime Agent Development Kit",
+    )
+    parser.add_argument(
         "--queries",
         action="store_true",
         help="affiche les requêtes Parallel qui seraient émises (sans les émettre)",
     )
     args = parser.parse_args(argv)
 
-    if args.clearance or args.against or args.suggest:
+    if args.clearance or args.against or args.suggest or args.adk:
+        # Les deux chemins rendent le même `ClearanceRun` : un test le vérifie
+        # verdict par verdict. Le drapeau ne change que le runtime.
+        if args.adk:
+            from greenlight.adk.runner import run_clearance_agent
+
+            def passe(script: str, draft_id: str, previous=None):
+                return run_clearance_agent(
+                    script,
+                    draft_id=draft_id,
+                    suggest=args.suggest,
+                    previous=previous,
+                    on_event=lambda agent, text: print(f"  [{agent:<12}] {text}"),
+                )
+        else:
+
+            def passe(script: str, draft_id: str, previous=None):
+                return run_clearance(
+                    script, draft_id=draft_id, suggest=args.suggest, previous=previous
+                )
+
         previous = None
         if args.against:
-            previous = run_clearance(args.against, draft_id="draft-1", suggest=args.suggest)
+            previous = passe(args.against, "draft-1")
             print(clearance_report(previous))
             print("\n" + "=" * 72 + "\nVERSION SUIVANTE\n" + "=" * 72 + "\n")
-        run = run_clearance(
-            args.script,
-            draft_id="draft-2" if previous else "draft-1",
-            suggest=args.suggest,
-            previous=previous,
-        )
+        run = passe(args.script, "draft-2" if previous else "draft-1", previous)
         print(clearance_report(run))
         extraction = run.extraction
     else:

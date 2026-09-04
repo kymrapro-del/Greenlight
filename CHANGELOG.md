@@ -56,12 +56,25 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   a writer would actually produce: two entities renamed, a phone number fixed, a
   scene added, and one entity kept by name but re-depicted.
 
+- **Native ADK pipeline** (`greenlight.adk`) — the eight phases packaged as
+  `BaseAgent` nodes in an ADK `Workflow` graph, deployable to Vertex AI Agent
+  Engine, plus the search strategy exposed as `FunctionTool`s. Workflow agents
+  rather than an `LlmAgent`: the phase order is known, depends on no input, and
+  a clearance report must be reproducible. `Workflow` and not `SequentialAgent`,
+  which ADK 2.8 deprecates. The layer reimplements nothing — a test asserts the
+  ADK and library paths return identical verdicts. Run it with
+  `python -m greenlight.pipeline <script> --clearance --adk`.
+- **Model discovery** (`greenlight.tools.models`) — lists the generation models
+  the configured credentials can actually reach, and flags whether the models in
+  `.env` are among them. Published price tables move and second-hand comparisons
+  go stale; this asks the API.
+
 ### Verified
 - On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
   hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
   entities the depiction rule should touch, and leaves the Coca-Cola control
   case `CLEAR`. On the rewrite, 5 of 16 entities are re-analysed and 68 % of the
-  research is skipped. 120 tests, all offline: no token and no credit spent
+  research is skipped. 141 tests, all offline: no token and no credit spent
   in CI.
 
 ### Planned

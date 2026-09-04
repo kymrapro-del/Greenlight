@@ -1,7 +1,12 @@
 # Stack recommandée par le guide officiel du hackathon :
 # "We recommend building your agents natively using the Agent Development Kit (ADK)
 #  instead of external wrapper libraries"
-google-cloud-aiplatform[agent_engines,adk]>=1.101.0
+#
+# `google-adk` porte le runtime d'agents : c'est lui qu'importe greenlight.adk.
+# `google-cloud-aiplatform[agent_engines]` sert au déploiement sur Agent Engine.
+# `google-genai` est le SDK modèle, appelé par la couche transport.
+google-adk>=2.8.0
+google-cloud-aiplatform[agent_engines]>=1.101.0
 google-genai>=1.0.0
 
 # Partenaire — track Parallel

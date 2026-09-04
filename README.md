@@ -308,17 +308,31 @@ fan-out, Firestore schema and IAM are specified in
 documented, not built: the pipeline currently runs in-process, with a bounded
 thread pool where the cloud design uses Cloud Tasks.
 
-The model layer is **`google-genai`** calling Gemini, with strict structured
-output on every call — no third-party wrapper framework, no non-Google model
-anywhere in the product.
+The eight phases are also packaged as a native **Agent Development Kit**
+pipeline in `backend/greenlight/adk/`, deployable to Vertex AI Agent Engine:
 
-The hackathon guide recommends the **Agent Development Kit**, and `google-adk` is
-declared in `backend/requirements.txt` for the Vertex AI Agent Engine deployment
-described in the architecture. It is **not yet imported by the pipeline**: the
-eight phases are a deterministic state machine rather than an agent loop, and
-`google-genai` is what actually runs today. Stated plainly here because a README
-that claims a dependency the code does not import is worth less than one that
-does not claim it.
+```bash
+PYTHONPATH=backend .venv/bin/python -m greenlight.pipeline \
+    samples/seventeen_minutes.fountain --clearance --adk
+```
+
+Each phase is a `BaseAgent` wired into an ADK `Workflow` graph, and the search
+strategy is exposed as ADK `FunctionTool`s. **Workflow agents rather than an
+`LlmAgent`**, deliberately: an `LlmAgent` lets the model choose which tool to
+call and in what order, which is right when the plan depends on the
+conversation. Here the order of the eight phases is known, depends on no input,
+and a clearance report has to be reproducible run to run — the hackathon rules
+ask for a deterministic agent. The model is still called where it brings
+judgement (extraction, classification, suggestion); it does not drive the
+orchestration.
+
+`Workflow` and not `SequentialAgent`: the latter is deprecated as of ADK 2.8.
+
+The ADK layer reimplements nothing — every phase delegates to the same function
+the library uses, and a test asserts the two execution paths return identical
+verdicts. The model layer underneath is `google-genai` calling Gemini with
+strict structured output on every call. No third-party wrapper framework, and no
+non-Google model anywhere in the product.
 
 ---
 
