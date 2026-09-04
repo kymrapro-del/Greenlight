@@ -16,7 +16,7 @@ export function FindingDetail({ finding }: { finding: Finding | null }) {
   if (!finding) {
     return (
       <div className="gl-detail gl-detail-empty">
-        <Icon name="gavel" />
+        <Icon name="document" />
         <p className="gl-body-large">Sélectionnez une entité pour voir son verdict.</p>
       </div>
     );
