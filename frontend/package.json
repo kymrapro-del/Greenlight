@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "theme": "node scripts/generate-theme.mjs"
+    "theme": "node scripts/generate-theme.mjs",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@material/material-color-utilities": "^0.4.0",
@@ -17,13 +19,13 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "esbuild": "^0.28.2",
     "oxlint": "^1.79.0",
-    "playwright": "^1.62.1",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
