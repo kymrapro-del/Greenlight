@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { VERDICTS, VERDICT_STYLES, type Verdict } from '../theme/verdicts';
 import { TIER_LABELS, TYPE_LABELS, type Finding, type Report } from '../types';
 import { Icon } from './Icon';
+import { StateLayer } from './StateLayer';
 import { VerdictChip } from './VerdictChip';
 
 /**
@@ -45,23 +46,22 @@ export function ReportCard({ report }: { report: Report }) {
         <Stat value={report.stats.escalated} label="verdicts remontés" />
       </div>
 
-      <div className="gl-report-filters" role="group" aria-label="Filtrer par verdict">
-        {VERDICTS.filter((v) => counts[v] > 0).map((verdict) => {
-          const on = active.has(verdict);
-          return (
-            <button
-              key={verdict}
-              type="button"
-              className={`gl-filter gl-label-large gl-state-layer ${on ? 'is-on' : ''}`}
-              aria-pressed={on}
-              onClick={() => toggleFilter(verdict)}
-            >
-              <Icon name={VERDICT_STYLES[verdict].icon} size={16} />
-              {VERDICT_STYLES[verdict].label} ({counts[verdict]})
-            </button>
-          );
-        })}
-      </div>
+      {/* Des filter chips M3, au sens propre : la librairie porte la coche de
+          sélection, le `aria-pressed`, la couche d'état et la navigation au
+          clavier dans le jeu de puces. */}
+      <md-chip-set className="gl-report-filters" aria-label="Filtrer par verdict">
+        {VERDICTS.filter((v) => counts[v] > 0).map((verdict) => (
+          <md-filter-chip
+            key={verdict}
+            className={`gl-filter is-${verdict.toLowerCase()}`}
+            label={`${VERDICT_STYLES[verdict].label} (${counts[verdict]})`}
+            selected={active.has(verdict)}
+            onClick={() => toggleFilter(verdict)}
+          >
+            <Icon name={VERDICT_STYLES[verdict].icon} size={18} slot="icon" />
+          </md-filter-chip>
+        ))}
+      </md-chip-set>
 
       <ul className="gl-findings">
         {visible.map((finding) => (
@@ -116,6 +116,9 @@ function FindingRow({
         aria-expanded={open}
         onClick={onToggle}
       >
+        {/* L'entité est rognée par sa carte : l'anneau de focus rentre à
+            l'intérieur plutôt que d'être coupé. */}
+        <StateLayer inward />
         <span
           className="gl-finding-rail"
           style={{ background: style.container }}

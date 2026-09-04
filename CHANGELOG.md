@@ -69,16 +69,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `.env` are among them. Published price tables move and second-hand comparisons
   go stale; this asks the API.
 
+- **Material 3 conversational interface** (`frontend/`) — a thread on the
+  Gemini pattern: history pane, composer, and the clearance report rendered
+  *inside* the answer rather than on a separate screen. Colour, shape, elevation
+  and type all come from tokens generated off one source colour; `md-ripple`,
+  `md-focus-ring` and `md-filter-chip` come from `@material/web` wherever the
+  library actually has the component, and nothing is imported to pad the list.
+
 ### Verified
 - On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
   hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
   entities the depiction rule should touch, and leaves the Coca-Cola control
   case `CLEAR`. On the rewrite, 5 of 16 entities are re-analysed and 68 % of the
   research is skipped. 141 tests, all offline: no token and no credit spent
-  in CI.
+  in CI. On the interface, the Material Web components are checked as actually
+  upgraded in the browser: press state layer, focus ring on `:focus-visible`,
+  and selectable filter chips.
 
-### Planned
-- Material 3 report UI
 
 ## [0.1.0] — 2026-09-03
 

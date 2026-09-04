@@ -56,12 +56,22 @@ const PATHS: Record<string, string> = {
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name, size = 18 }: { name: string; size?: number }) {
+export function Icon({
+  name,
+  size = 18,
+  slot,
+}: {
+  name: string;
+  size?: number;
+  /** Pour poser l'icône dans un emplacement d'un composant Material Web. */
+  slot?: string;
+}) {
   const path = PATHS[name];
   if (!path) return null;
   return (
     <svg
       className="gl-icon"
+      slot={slot}
       width={size}
       height={size}
       viewBox="0 0 24 24"

@@ -299,6 +299,7 @@ body {
   padding: 16px 18px;
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--gl-shape-pane);
+  --gl-state-shape: var(--gl-shape-pane);
   background: transparent;
   color: var(--md-sys-color-on-surface);
   text-align: left;
@@ -559,33 +560,60 @@ body {
   color: var(--md-sys-color-error);
 }
 
-/* Filtres : des puces M3 en variante « filter », posées sur les tokens. */
+/* Filtres : de vraies `md-filter-chip`. `md-chip-set` porte déjà la mise en
+   ligne (flex, retour à la ligne, gouttière de 8 dp) — rien à réécrire. */
 .gl-report-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-bottom: 12px;
 }
 
+/* La forme des puces suit l'échelle de rayons de l'application plutôt que la
+   valeur par défaut de la librairie : c'est le seul écart voulu. */
 .gl-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--md-sys-color-outline);
-  border-radius: var(--gl-shape-chip);
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-  --gl-state-color: var(--md-sys-color-on-surface);
+  --md-filter-chip-container-shape: var(--gl-shape-chip);
+  --md-filter-chip-icon-size: 18px;
 }
 
-.gl-filter.is-on {
-  border-color: transparent;
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-  --gl-state-color: var(--md-sys-color-on-secondary-container);
+/* Sélectionnée, la puce prend la couleur de son verdict — le même couple
+   `container` / `on-container` que la pastille de la ligne. Le contraste est
+   garanti par construction, sans qu'aucun hex n'apparaisse ici. */
+.gl-filter.is-change_recommended {
+  --md-filter-chip-selected-container-color: var(--md-sys-color-error-container);
+  --gl-chip-on-selected: var(--md-sys-color-on-error-container);
+}
+
+.gl-filter.is-license_required {
+  --md-filter-chip-selected-container-color: var(--md-sys-color-secondary-container);
+  --gl-chip-on-selected: var(--md-sys-color-on-secondary-container);
+}
+
+.gl-filter.is-caution {
+  --md-filter-chip-selected-container-color: var(--md-sys-color-warning-container);
+  --gl-chip-on-selected: var(--md-sys-color-on-warning-container);
+}
+
+.gl-filter.is-unresolved {
+  --md-filter-chip-selected-container-color: var(--md-sys-color-surface-variant);
+  --gl-chip-on-selected: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-filter.is-clear {
+  --md-filter-chip-selected-container-color: var(--md-sys-color-tertiary-container);
+  --gl-chip-on-selected: var(--md-sys-color-on-tertiary-container);
+}
+
+/* Le libellé, l'icône et la couche d'état de l'état sélectionné se règlent un
+   par un : M3 n'a pas de token « couleur du contenu sur la puce ». */
+.gl-filter {
+  --md-filter-chip-selected-label-text-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-hover-label-text-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-focus-label-text-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-pressed-label-text-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-leading-icon-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-hover-leading-icon-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-focus-leading-icon-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-pressed-leading-icon-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-hover-state-layer-color: var(--gl-chip-on-selected);
+  --md-filter-chip-selected-pressed-state-layer-color: var(--gl-chip-on-selected);
 }
 
 /* --- Les entités -------------------------------------------------------- */
@@ -634,6 +662,7 @@ body {
   text-align: left;
   cursor: pointer;
   --gl-state-color: var(--md-sys-color-on-surface);
+  --gl-state-shape: var(--gl-shape-finding-card);
 }
 
 .gl-finding-rail {

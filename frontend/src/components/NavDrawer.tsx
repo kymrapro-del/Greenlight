@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { StateLayer } from './StateLayer';
 
 export interface Thread {
   id: string;
@@ -48,22 +49,26 @@ export function NavDrawer({
           aria-label={open ? 'Replier le volet' : 'Déplier le volet'}
           aria-expanded={open}
         >
-          <Icon name="panel" size={20} />
+          <StateLayer />
+        <Icon name="panel" size={20} />
         </button>
       </header>
 
       <button type="button" className="gl-nav-item is-primary gl-state-layer" onClick={onNew}>
+        <StateLayer />
         <Icon name="compose" size={20} />
         {open && <span className="gl-label-large">Nouvelle analyse</span>}
       </button>
 
       <nav className="gl-nav" aria-label="Sections">
         <button type="button" className="gl-nav-item gl-state-layer">
-          <Icon name="search" size={20} />
+          <StateLayer />
+        <Icon name="search" size={20} />
           {open && <span className="gl-label-large">Rechercher une entité</span>}
         </button>
         <button type="button" className="gl-nav-item gl-state-layer">
-          <Icon name="library" size={20} />
+          <StateLayer />
+        <Icon name="library" size={20} />
           {open && <span className="gl-label-large">Scénarios</span>}
         </button>
       </nav>
@@ -81,6 +86,7 @@ export function NavDrawer({
               aria-current={thread.id === activeId ? 'true' : undefined}
               onClick={() => onSelect(thread.id)}
             >
+              <StateLayer />
               {thread.title}
             </button>
           ))}
@@ -88,6 +94,7 @@ export function NavDrawer({
       )}
 
       <button type="button" className="gl-nav-item gl-state-layer">
+        <StateLayer />
         <Icon name="history" size={20} />
         {open && <span className="gl-label-large">Activité</span>}
       </button>
@@ -107,6 +114,7 @@ export function NavDrawer({
               className="gl-icon-button gl-state-layer"
               aria-label="Paramètres"
             >
+              <StateLayer />
               <Icon name="settings" size={18} />
             </button>
           </>

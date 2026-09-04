@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Icon } from './Icon';
+import { StateLayer } from './StateLayer';
 
 /**
  * Un tour de conversation.
@@ -64,6 +65,7 @@ export function ResponseActions({ note }: { note?: string }) {
                 : 'Copier'
           }
         >
+          <StateLayer />
           <Icon name={name} size={18} />
         </button>
       ))}

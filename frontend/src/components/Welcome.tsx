@@ -1,4 +1,5 @@
 import { Composer } from './Composer';
+import { StateLayer } from './StateLayer';
 
 /**
  * L'état d'accueil : un titre, la saisie, et des amorces.
@@ -36,6 +37,7 @@ export function Welcome({
             className="gl-suggestion gl-state-layer"
             onClick={() => onPick(s.id)}
           >
+            <StateLayer />
             <span className="gl-body-large">{s.label}</span>
             <span className="gl-body-small gl-suggestion-hint">{s.hint}</span>
           </button>

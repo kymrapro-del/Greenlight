@@ -264,21 +264,35 @@ Verdicts map to M3 colour **roles**, never to raw hex — `error-container` for
 Contrast is guaranteed by construction, because M3 computes every
 `container` / `on-container` pair to meet the thresholds.
 
-**Where the official library stops.** `@material/web` is in maintenance mode and
-ships twenty components — no card, no navigation rail, no top app bar. The app
-bar, the panes, the segmented version switcher and the list rows are therefore
-built from M3 **design tokens** rather than from components; the library's list,
-chips, dialog and progress are used where they exist. Said plainly because a
-reader who knows the library will notice, and the shape of the gap is worth
-knowing.
+**The interface is a conversation**, on the pattern of Gemini: a history pane, a
+prompt composer, and answers in the thread. The clearance report is rendered
+*inside* the answer rather than on a separate screen — that is how an assistant
+returns a structured result, and the verdicts keep their reading affordances
+without leaving the thread.
+
+**What comes from the library, and what does not.** `@material/web` is in
+maintenance mode and ships twenty components — no card, no chat composer, no
+navigation drawer. So the shell (drawer, composer, turns, report) is built from
+M3 **design tokens**, and the library is used where it actually has the
+component:
+
+| Used | Why the library rather than hand-rolled |
+| --- | --- |
+| `md-ripple` | The full M3 state layer. A hand-written `::after` does hover and focus, but not the press wave — it starts at the contact point, is sized from the container, and takes three times longer to leave than to arrive. |
+| `md-focus-ring` | The focus ring with its grow animation, shown on `:focus-visible` only, so never after a mouse click. |
+| `md-filter-chip` | The verdict filters *are* M3 filter chips: same role, same `aria-pressed`, same check mark on selection. |
+
+Said plainly because a reader who knows the library will notice, and the shape
+of the gap is worth knowing. Nothing is imported to pad the list: `md-divider`
+is not used because the layout has no rule to draw.
 
 Icons are inline SVG rather than the Material Symbols font: a webfont that fails
 to load renders the icon's *name* as literal text across the interface. The
 screenshots in this repository were taken with Google Fonts unreachable.
 
 The corner radius scale carries all ten steps, including the three added by M3
-Expressive that the library does not yet ship — the selected row uses shape
-morphing to signal selection independently of colour.
+Expressive that the library does not yet ship — an opened entity morphs to a
+wider radius, so the report signals what is open independently of colour.
 
 ---
 
@@ -287,7 +301,7 @@ morphing to signal selection independently of colour.
 **What runs today** — a Python library plus a static Material 3 front end:
 
 ```
-frontend/            Material 3 report screen (Vite + React)
+frontend/            Material 3 conversational interface (Vite + React)
    │  reads a seeded JSON report
    ▼
 backend/greenlight/

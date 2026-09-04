@@ -16,16 +16,22 @@ type CustomElementProps<T = Record<string, unknown>> = DetailedHTMLProps<
   HTMLElement
 >;
 
+/** L'élément qu'un `click` sur `md-filter-chip` porte : il a déjà basculé. */
+export interface FilterChipElement extends HTMLElement {
+  selected: boolean;
+}
+
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
+      'md-ripple': CustomElementProps<{ disabled?: boolean }>;
+      'md-focus-ring': CustomElementProps<{ inward?: boolean }>;
       'md-chip-set': CustomElementProps;
-      'md-filter-chip': CustomElementProps<{ label?: string; selected?: boolean }>;
-      'md-circular-progress': CustomElementProps<{ indeterminate?: boolean }>;
-      'md-list': CustomElementProps;
-      'md-list-item': CustomElementProps<{ type?: 'text' | 'button' | 'link'; href?: string }>;
-      'md-divider': CustomElementProps<{ inset?: boolean }>;
-      'md-ripple': CustomElementProps<{ for?: string }>;
+      'md-filter-chip': CustomElementProps<{
+        label?: string;
+        selected?: boolean;
+        disabled?: boolean;
+      }>;
     }
   }
 }

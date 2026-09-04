@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Icon } from './Icon';
+import { StateLayer } from './StateLayer';
 
 /**
  * La barre de saisie.
@@ -42,6 +43,7 @@ export function Composer({
         aria-label="Joindre un scénario"
         disabled={disabled}
       >
+        <StateLayer />
         <Icon name="add" size={22} />
       </button>
 
@@ -61,12 +63,14 @@ export function Composer({
 
       {/* Le modèle qui répond est une information, pas un réglage caché. */}
       <button type="button" className="gl-model-select gl-label-large gl-state-layer">
+        <StateLayer />
         Flash
         <Icon name="expand_more" size={18} />
       </button>
 
       {canSend ? (
         <button type="submit" className="gl-send gl-state-layer" aria-label="Envoyer">
+          <StateLayer />
           <Icon name="send" size={20} />
         </button>
       ) : (
@@ -76,6 +80,7 @@ export function Composer({
           aria-label="Dicter"
           disabled={disabled}
         >
+          <StateLayer />
           <Icon name="mic" size={20} />
         </button>
       )}

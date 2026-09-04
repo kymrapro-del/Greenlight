@@ -7,15 +7,22 @@
  * l'état. La teinte du composant reste donc la même dans tous ses états, et le
  * retour visuel est identique partout dans l'application.
  *
- * Les opacités viennent des tokens de la librairie (v0_192) : survol 8 %,
- * focus 12 %, pressé 12 %, glissé 16 %.
+ * Ce voile n'est plus écrit à la main : il vient de `md-ripple` et
+ * `md-focus-ring`, les composants de la librairie. Une version maison sait
+ * faire le survol et le focus, mais pas l'onde de pression — elle part du point
+ * de contact, sa taille se calcule sur celle du conteneur, et sa sortie dure
+ * trois fois son entrée. C'est précisément le retour tactile de M3.
  *
- * Application : mettre `gl-state-layer` sur un élément positionné, et régler
- * `--gl-state-color` sur la couleur « on » du conteneur. Le voile est un
- * pseudo-élément, donc il ne touche ni au fond ni au contenu.
+ * Application : mettre `gl-state-layer` sur la surface interactive, y poser
+ * `<StateLayer />`, et régler `--gl-state-color` sur la couleur « on » du
+ * conteneur — plus `--gl-state-shape` quand le rayon n'est pas complet, l'anneau
+ * de focus ne pouvant pas lire un `border-radius`.
  */
 
 :root {
+  /* Les opacités des tokens de la librairie (v0_192). `md-ripple` porte le
+     survol et la pression ; le focus reste déclaré pour les surfaces qui le
+     dessinent elles-mêmes. */
   --md-sys-state-hover-state-layer-opacity: 0.08;
   --md-sys-state-focus-state-layer-opacity: 0.12;
   --md-sys-state-pressed-state-layer-opacity: 0.12;
@@ -23,38 +30,32 @@
 }
 
 .gl-state-layer {
+  /* `md-ripple` se pose en `position: absolute; inset: 0` et hérite du rayon :
+     le conteneur doit donc être son référentiel. */
   position: relative;
+  /* Le voile reste dans le bouton et derrière son contenu : sans ce contexte
+     d'empilement, une couche positionnée passerait par-dessus le libellé. */
   isolation: isolate;
+  --gl-state-shape: var(--md-sys-shape-corner-full);
 }
 
-.gl-state-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+/* Une seule passerelle entre les variables de l'application et celles de la
+   librairie : les surfaces continuent de déclarer `--gl-state-color`. */
+.gl-state-layer > md-ripple {
+  --md-ripple-hover-color: var(--gl-state-color, var(--md-sys-color-on-surface));
+  --md-ripple-pressed-color: var(--gl-state-color, var(--md-sys-color-on-surface));
+  --md-ripple-hover-opacity: var(--md-sys-state-hover-state-layer-opacity);
+  --md-ripple-pressed-opacity: var(--md-sys-state-pressed-state-layer-opacity);
   z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background: var(--gl-state-color, var(--md-sys-color-on-surface));
-  opacity: 0;
-  transition: opacity var(--md-sys-motion-duration-short4)
-    var(--md-sys-motion-easing-standard);
 }
 
-.gl-state-layer:hover::after {
-  opacity: var(--md-sys-state-hover-state-layer-opacity);
+.gl-state-layer > md-focus-ring {
+  --md-focus-ring-shape: var(--gl-state-shape);
+  --md-focus-ring-color: var(--md-sys-color-secondary);
 }
 
-/* Le focus clavier se superpose au survol plutôt que de le remplacer. */
-.gl-state-layer:focus-visible::after {
-  opacity: var(--md-sys-state-focus-state-layer-opacity);
-}
-
-.gl-state-layer:active::after {
-  opacity: var(--md-sys-state-pressed-state-layer-opacity);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gl-state-layer::after {
-    transition: none;
-  }
+/* L'anneau de la librairie remplace le contour du navigateur, et seulement
+   quand il prend le relais : `:focus-visible` sans lui resterait invisible. */
+.gl-state-layer:focus-visible {
+  outline: none;
 }

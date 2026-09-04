@@ -339,7 +339,9 @@ Aucun rôle primitif (`editor`, `owner`). Aucune clé de SA exportée : identit�
 
 ### 7.1 Stack
 
-React 19 + TypeScript + Vite. **`@material/web`** (Material Web Components, l'implémentation M3 officielle) — aucun composant maison, aucun Tailwind, aucun shadcn. Que du M3.
+React 19 + TypeScript + Vite. Que du M3 : aucun Tailwind, aucun shadcn, aucun hex en dur.
+
+**`@material/web`** (Material Web Components, l'implémentation M3 officielle) est utilisé là où il a le composant : `md-ripple` et `md-focus-ring` pour la couche d'état de chaque surface interactive, `md-filter-chip` et `md-chip-set` pour les filtres de verdict. La librairie est en maintenance et n'expose qu'une vingtaine de composants — ni carte, ni composer, ni volet de navigation — donc la coquille conversationnelle (volet, saisie, tours, rapport) est bâtie sur les **tokens** M3, pas sur des composants. C'est le seul écart, et il tient à ce que la librairie ne couvre pas.
 
 `@material/material-color-utilities` génère le schéma dynamique à partir d'une couleur source.
 
