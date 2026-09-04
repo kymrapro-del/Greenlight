@@ -516,24 +516,6 @@ body {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* --- Adaptatif ----------------------------------------------------------- */
-
-@media (max-width: 899px) {
-  .gl-drawer {
-    display: none;
-  }
-
-  .gl-conversation,
-  .gl-composer {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .gl-bubble {
-    max-width: 88%;
-  }
-}
-
 /* --- Le rapport, dans la réponse ---------------------------------------- */
 
 .gl-report {
@@ -909,10 +891,104 @@ body {
 
 /* --- Adaptatif ---------------------------------------------------------- */
 
-/* Sous 900 px, le volet disparaît : la conversation prend toute la largeur. */
-@media (max-width: 899px) {
+/*
+ * Le voile et la barre de relais n'appartiennent qu'aux fenêtres étroites. Ils
+ * sont déclarés ici, AVANT la media query qui les allume : une règle de même
+ * spécificité écrite plus bas gagnerait, et les rallumer après les aurait
+ * éteints partout.
+ */
+.gl-scrim,
+.gl-topbar {
+  display: none;
+}
+
+.gl-topbar {
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.gl-topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * M3 découpe la largeur de fenêtre en classes, et le volet de navigation change
+ * de nature d'une classe à l'autre. Au-dessus de 840 dp la fenêtre est
+ * `expanded` : le volet est permanent, posé à côté du contenu. En dessous elle
+ * est `compact` ou `medium`, et le volet devient **modal** — il se superpose,
+ * assombrit le contenu derrière lui, et se referme dès qu'on touche ailleurs.
+ *
+ * Le masquer purement et simplement, comme avant, coûtait l'historique et la
+ * nouvelle analyse à quiconque ouvre l'application sur un téléphone. Un jury en
+ * ouvre une sur son téléphone.
+ */
+@media (max-width: 839px) {
   .gl-drawer {
-    display: none;
+    position: fixed;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(320px, 86vw);
+    background: var(--md-sys-color-surface-container-low);
+    border-start-end-radius: var(--md-sys-shape-corner-large);
+    border-end-end-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-level1);
+    transform: translateX(-100%);
+    transition:
+      transform var(--md-sys-motion-duration-medium2)
+        var(--md-sys-motion-easing-emphasized-decelerate),
+      visibility var(--md-sys-motion-duration-medium2);
+    visibility: hidden;
+  }
+
+  /* Replié n'a pas de sens pour un volet modal : il est dedans ou dehors. */
+  .gl-drawer.is-open {
+    width: min(320px, 86vw);
+    transform: none;
+    visibility: visible;
+  }
+
+  .gl-drawer.is-collapsed {
+    align-items: stretch;
+  }
+
+  .gl-drawer.is-collapsed .gl-nav-item {
+    justify-content: flex-start;
+    width: auto;
+    padding: 0 16px;
+  }
+
+  /* Le voile M3 : il porte le clic de fermeture, donc il ne peut pas être un
+     simple décor en `::before`. */
+  .gl-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    border: none;
+    padding: 0;
+    background: var(--md-sys-color-scrim);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--md-sys-motion-duration-medium2)
+      var(--md-sys-motion-easing-standard);
+  }
+
+  .gl-scrim.is-visible {
+    opacity: 0.32;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  /* Le bouton du volet est dans le volet : hors écran, il faut un relais. */
+  .gl-topbar {
+    display: flex;
   }
 
   .gl-conversation,
@@ -923,6 +999,73 @@ body {
 
   .gl-bubble {
     max-width: 88%;
+  }
+
+  .gl-detail-columns {
+    grid-template-columns: 1fr;
+  }
+
+  /*
+   * Sur une ligne unique, le nom de l'entité est le premier à céder : il se
+   * fait tronquer par la pastille de verdict, et « Chicago Tri… » ne dit plus
+   * de quelle publication on parle. Le nom est l'information principale du
+   * rapport ; c'est la pastille qui passe à la ligne.
+   */
+  .gl-finding-head {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .gl-finding-id {
+    flex: 1 1 100%;
+    order: -1;
+  }
+
+  /* Le rail de verdict ne peut plus longer une ligne unique : il devient un
+     bandeau en tête de carte, qui garde le même rôle de repère coloré. */
+  .gl-finding-rail {
+    flex: 1 0 100%;
+    order: -2;
+    width: auto;
+    height: 4px;
+    min-height: 0;
+    align-self: auto;
+  }
+
+  .gl-finding-name,
+  .gl-finding-meta {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  /*
+   * La saisie passe sur deux rangées : le champ occupe toute la largeur, les
+   * actions se rangent dessous. Sur 390 dp, tout mettre en ligne laissait au
+   * texte un tiers de la largeur, et le seul indice de ce qu'on peut y écrire
+   * s'affichait sur trois lignes.
+   */
+  .gl-composer-field {
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 8px 10px;
+  }
+
+  .gl-composer-input {
+    flex: 1 0 100%;
+    order: -1;
+    padding: 6px 4px;
+  }
+
+  .gl-model-select {
+    margin-inline-start: auto;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-drawer,
+  .gl-scrim {
+    transition: none;
   }
 }
 
@@ -979,8 +1122,21 @@ body {
 .gl-offline {
   max-width: 860px;
   margin: 16px auto 0;
-  border-left-color: var(--md-sys-color-error);
   color: var(--md-sys-color-on-surface);
+  /* Le liseré de `.gl-banner` est une ombre interne, pas une bordure : le
+     repeindre demande de redéclarer l'ombre, pas une couleur de bordure. */
+  box-shadow: inset 3px 0 0 var(--md-sys-color-error);
+}
+
+/* Un fragment de commande dans une bannière. Le `code` reste lisible sans
+   rompre la ligne, et sans prendre la couleur d'un lien. */
+.gl-banner code {
+  padding: 1px 5px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-surface-container-highest);
+  font-family: var(--md-ref-typeface-mono, ui-monospace, monospace);
+  font-size: 0.94em;
+  white-space: nowrap;
 }
 
 /* --- Amorces ------------------------------------------------------------- */

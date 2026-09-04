@@ -16,6 +16,7 @@ import { AssistantMessage, ResponseActions, UserMessage } from './components/Mes
 import { NavDrawer, type Thread } from './components/NavDrawer';
 import { ReportCard } from './components/ReportCard';
 import { RunProgress } from './components/RunProgress';
+import { StateLayer } from './components/StateLayer';
 import { Welcome } from './components/Welcome';
 import type { Report } from './types';
 
@@ -82,7 +83,12 @@ function title(text: string): string {
 export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  // M3 : au-dessus de 840 dp le volet est permanent, en dessous il est modal et
+  // donc fermé par défaut. La valeur initiale se lit avant le premier rendu
+  // plutôt qu'après, pour ne pas montrer un volet qui se referme aussitôt.
+  const [drawerOpen, setDrawerOpen] = useState(
+    () => !window.matchMedia('(max-width: 839px)').matches,
+  );
   const [samples, setSamples] = useState<Sample[]>([]);
   const [health, setHealth] = useState<Health | null>(null);
   const [reachable, setReachable] = useState<boolean | null>(null);
@@ -99,6 +105,15 @@ export default function App() {
         setReachable(true);
       })
       .catch(() => setReachable(false));
+  }, []);
+
+  // Le passage d'une classe de fenêtre à l'autre change la nature du volet :
+  // permanent au-dessus de 840 dp, modal en dessous. L'état suit.
+  useEffect(() => {
+    const narrow = window.matchMedia('(max-width: 839px)');
+    const sync = (e: MediaQueryListEvent | MediaQueryList) => setDrawerOpen(!e.matches);
+    narrow.addEventListener('change', sync);
+    return () => narrow.removeEventListener('change', sync);
   }, []);
 
   // La conversation suit le dernier tour, comme dans n'importe quel fil.
@@ -272,6 +287,12 @@ export default function App() {
   const receiveFile = (fileName: string, text: string) =>
     submitScreenplay(text, `Analyse ${fileName} avant qu’on le verrouille.`);
 
+  // Un volet modal se referme sur le choix qu'on vient d'y faire ; un volet
+  // permanent reste ouvert. Le même geste, deux comportements, comme M3 le veut.
+  const closeIfModal = () => {
+    if (window.matchMedia('(max-width: 839px)').matches) setDrawerOpen(false);
+  };
+
   const threads: Thread[] = conversations.map((c) => ({ id: c.id, title: c.title }));
   const model = health?.models.classify;
 
@@ -281,17 +302,68 @@ export default function App() {
         threads={threads}
         activeId={activeId}
         open={drawerOpen}
-        onSelect={setActiveId}
-        onNew={() => setActiveId(null)}
+        onSelect={(id) => {
+          setActiveId(id);
+          closeIfModal();
+        }}
+        onNew={() => {
+          setActiveId(null);
+          closeIfModal();
+        }}
         onToggle={() => setDrawerOpen((v) => !v)}
       />
 
+      {/* Le voile du volet modal. Il porte la fermeture, donc c'est un bouton :
+          un `div` cliquable serait invisible au clavier et aux lecteurs. */}
+      <button
+        type="button"
+        className={`gl-scrim ${drawerOpen ? 'is-visible' : ''}`}
+        aria-label="Fermer le volet"
+        tabIndex={drawerOpen ? 0 : -1}
+        onClick={() => setDrawerOpen(false)}
+      />
+
       <div className="gl-main">
+        {/* Sur fenêtre étroite le bouton du volet part hors écran avec lui :
+            cette barre le remet à portée. */}
+        <header className="gl-topbar">
+          <button
+            type="button"
+            className="gl-icon-button gl-state-layer"
+            aria-label="Ouvrir le volet"
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <StateLayer />
+            <Icon name="menu" size={20} />
+          </button>
+          <span className="gl-title-medium gl-topbar-title">
+            {active?.title ?? 'GREENLIGHT'}
+          </span>
+        </header>
+
         {reachable === false && (
           <p className="gl-body-small gl-banner gl-offline" role="alert">
             <Icon name="cancel" size={16} />
-            L’API GREENLIGHT n’est pas joignable. L’interface ne montre pas de rapport en conserve
-            à la place : il n’y a rien à analyser tant que le serveur ne répond pas.
+            <span>
+              L’API GREENLIGHT n’est pas joignable. L’interface ne montre pas de rapport en
+              conserve à la place : il n’y a rien à analyser tant que le serveur ne répond pas.
+            </span>
+          </p>
+        )}
+
+        {/* Le diagnostic avant le clic. Laisser lancer une passe qui ne peut
+            aboutir ferait perdre du temps et n'apprendrait rien. */}
+        {health && !health.canAnalyze && (
+          <p className="gl-body-small gl-banner gl-offline" role="alert">
+            <Icon name="cancel" size={16} />
+            {/* Un seul élément flex : sans ce span, chaque `code` deviendrait
+                une colonne et la phrase se découperait en morceaux. */}
+            <span>
+              Ce serveur rejoue des appels enregistrés et n’en a aucun pour Gemini : toute analyse
+              échouera. Renseignez <code>GOOGLE_API_KEY</code> et <code>PARALLEL_API_KEY</code>, ou
+              enregistrez les fixtures avec <code>FIXTURE_MODE=record</code>.
+            </span>
           </p>
         )}
 
@@ -399,9 +471,9 @@ function TurnView({ turn, live }: { turn: Turn; live: boolean }) {
       {report.placeholder && (
         <p className="gl-body-small gl-banner">
           <Icon name="science" size={16} />
-          {live
+          <span>{live
             ? 'Passe réelle, mais le serveur la signale comme non validée.'
-            : 'Le serveur rejoue des recherches enregistrées plutôt que d’appeler les API : les phases sont réelles, les sources viennent du disque.'}
+            : 'Le serveur rejoue des recherches enregistrées plutôt que d’appeler les API : les phases sont réelles, les sources viennent du disque.'}</span>
         </p>
       )}
 

@@ -22,6 +22,12 @@ export interface Health {
   live: boolean;
   fixtureMode: 'live' | 'record' | 'replay';
   credentials: boolean;
+  fixtures: { gemini: number; parallelSearch: number };
+  /**
+   * Faux quand l'instance rejoue le disque sans rien avoir enregistré : elle ne
+   * peut alors produire aucun rapport, et l'écran doit le dire avant le clic.
+   */
+  canAnalyze: boolean;
   models: { extract: string; classify: string };
   runsHeld: number;
 }

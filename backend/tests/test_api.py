@@ -86,6 +86,18 @@ def test_health_says_whether_the_instance_actually_calls_the_apis(client):
     assert body["fixtureMode"] == "replay"
 
 
+def test_health_admits_when_the_instance_cannot_analyse_anything(client):
+    """Rejouer le disque sans rien avoir enregistré ne produit aucun rapport.
+
+    Le dire dans `/api/health` permet à l'écran de l'annoncer avant le clic. Sans
+    ce champ, l'utilisateur lance une passe, attend, et récolte une pile
+    d'erreurs de fixtures pour tout diagnostic.
+    """
+    body = client.get("/api/health").json()
+    assert body["canAnalyze"] == (body["fixtures"]["gemini"] > 0 or body["live"])
+    assert set(body["fixtures"]) == {"gemini", "parallelSearch"}
+
+
 def test_samples_are_served_with_their_real_scene_count(client):
     samples = client.get("/api/samples").json()
     ids = [s["id"] for s in samples]

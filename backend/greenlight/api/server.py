@@ -41,6 +41,7 @@ from greenlight.api.report import to_payload
 from greenlight.config import REPO_ROOT, settings
 from greenlight.pipeline import as_draft, run_clearance
 from greenlight.store.runs import store
+from greenlight.tools.fixtures import FixtureStore
 from greenlight.tools.parallel_search import ParallelSearch
 
 SAMPLES_DIR = REPO_ROOT / "samples"
@@ -129,11 +130,21 @@ def health() -> dict[str, Any]:
     credentials = bool(settings.parallel_api_key) and bool(
         settings.google_api_key or (settings.use_vertex and settings.project)
     )
+    live = _live_mode() and credentials
+    fixtures = {
+        "gemini": FixtureStore("gemini").count(),
+        "parallelSearch": FixtureStore("parallel_search").count(),
+    }
+    # Une instance qui rejoue le disque sans rien avoir enregistré ne peut rien
+    # analyser. Le dire ici permet à l'écran de l'annoncer avant le clic plutôt
+    # que de laisser l'utilisateur découvrir la panne au bout d'une passe.
     return {
         "status": "ok",
-        "live": _live_mode() and credentials,
+        "live": live,
         "fixtureMode": settings.fixture_mode,
         "credentials": credentials,
+        "fixtures": fixtures,
+        "canAnalyze": live or fixtures["gemini"] > 0,
         "models": {"extract": settings.model_extract, "classify": settings.model_classify},
         "runsHeld": len(store),
     }

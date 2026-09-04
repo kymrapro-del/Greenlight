@@ -47,6 +47,15 @@ class FixtureStore:
     def _path(self, key: str) -> Path:
         return self.root / f"{key}.json"
 
+    def count(self) -> int:
+        """Combien d'appels ce namespace sait rejouer.
+
+        En mode replay, ce nombre décide si l'instance peut produire quoi que ce
+        soit. Zéro fixture et zéro clé, et toute analyse échouera : mieux vaut le
+        dire sur la page d'accueil qu'après le clic.
+        """
+        return len(list(self.root.glob("*.json"))) if self.root.exists() else 0
+
     def call(self, payload: dict[str, Any], fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         """Exécute `fn` ou renvoie la réponse mémorisée, selon le mode."""
         key = self.key(payload)
