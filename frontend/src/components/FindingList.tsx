@@ -58,6 +58,11 @@ export function FindingList({
                     ? `scène ${finding.scenes[0]}`
                     : `scènes ${finding.scenes.join(', ')}`}
                   {finding.escalatedFrom ? ' · verdict remonté' : ''}
+                  {finding.reusedFromPreviousDraft && (
+                    <span className="gl-reused" title="Verdict repris de la version précédente : rien n'a été recherché à nouveau">
+                      {' · '}repris
+                    </span>
+                  )}
                 </span>
               </span>
             </button>

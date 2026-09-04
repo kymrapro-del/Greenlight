@@ -32,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("out", help="chemin du fichier JSON à écrire")
     parser.add_argument("--script", default=str(DEFAULT_SCRIPT))
     parser.add_argument(
+        "--against",
+        metavar="SCRIPT_V1",
+        help="version précédente : produit un rapport de diff plutôt qu'une passe complète",
+    )
+    parser.add_argument(
         "--placeholder",
         action="store_true",
         help="produit la graine depuis le harnais de test, sans toucher aux API",
@@ -43,13 +48,28 @@ def main(argv: list[str] | None = None) -> int:
         # Le harnais de test fournit un transport scripté : aucune clé requise,
         # aucun crédit consommé, et le résultat est signalé comme tel.
         sys.path.insert(0, str(REPO_ROOT / "backend" / "tests"))
-        from test_pipeline import ScriptedSearch, clearance_client  # type: ignore
+        from test_pipeline import ScriptedSearch, v2_client  # type: ignore
 
-        run = run_clearance(
-            args.script, clearance_client(), ScriptedSearch(), suggest=args.suggest
-        )
+        def passe(script: str, draft_id: str, previous=None):
+            return run_clearance(
+                script,
+                v2_client(),
+                ScriptedSearch(),
+                draft_id=draft_id,
+                suggest=args.suggest,
+                previous=previous,
+            )
     else:
-        run = run_clearance(args.script, suggest=args.suggest)
+
+        def passe(script: str, draft_id: str, previous=None):
+            return run_clearance(script, draft_id=draft_id, suggest=args.suggest, previous=previous)
+
+    if args.against:
+        # La passe sur la version précédente sert de référence : c'est elle qui
+        # permet au diff de ne réanalyser que ce que la réécriture a touché.
+        run = passe(args.script, "draft-2", previous=passe(args.against, "draft-1"))
+    else:
+        run = passe(args.script, "draft-1")
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

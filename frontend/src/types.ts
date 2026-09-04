@@ -39,6 +39,8 @@ export interface Finding {
   resolvedByRule: boolean;
   suggestedReplacement: string | null;
   replacementVerified: boolean;
+  /** Verdict repris de la version précédente, sans nouvelle recherche. */
+  reusedFromPreviousDraft: boolean;
   scenes: number[];
   occurrences: Occurrence[];
   citations: Citation[];

@@ -31,8 +31,12 @@ def _occurrence_payload(entity: Entity) -> list[dict[str, Any]]:
     ]
 
 
-def finding_payload(finding: Finding, entity: Entity) -> dict[str, Any]:
+def finding_payload(finding: Finding, entity: Entity, reused: bool = False) -> dict[str, Any]:
     return {
+        # Vrai quand le verdict vient de la version précédente sans avoir été
+        # recalculé. L'interface le montre : c'est ce qui rend visible ce que le
+        # diff a réellement économisé, entité par entité.
+        "reusedFromPreviousDraft": reused,
         "id": finding.id,
         "entityId": finding.entity_id,
         "name": entity.canonical_name,
@@ -66,8 +70,11 @@ def finding_payload(finding: Finding, entity: Entity) -> dict[str, Any]:
 def to_payload(run: ClearanceRun, placeholder: bool = False) -> dict[str, Any]:
     """Le rapport complet, tel que l'interface le consomme."""
     entities = {e.id: e for e in run.extraction.entities}
+    reused_ids = {f.entity_id for f in run.diff.reused} if run.diff else set()
     findings = [
-        finding_payload(f, entities[f.entity_id]) for f in run.findings if f.entity_id in entities
+        finding_payload(f, entities[f.entity_id], reused=f.entity_id in reused_ids)
+        for f in run.findings
+        if f.entity_id in entities
     ]
 
     payload: dict[str, Any] = {

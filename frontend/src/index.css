@@ -84,10 +84,55 @@ body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
 }
 
+.gl-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
 .gl-metrics {
   display: flex;
   gap: 28px;
   margin: 0;
+}
+
+/* Sélecteur de version — un segmented button bâti sur les tokens, puisque
+   @material/web ne le livre pas. */
+.gl-draft-switch {
+  display: inline-flex;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--gl-shape-pill);
+  overflow: hidden;
+}
+
+.gl-draft-option {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.gl-draft-option + .gl-draft-option {
+  border-left: 1px solid var(--md-sys-color-outline);
+}
+
+.gl-draft-option:hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.gl-draft-option[aria-pressed='true'] {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.gl-draft-option:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: -3px;
 }
 
 .gl-metric dt,
@@ -117,6 +162,81 @@ body {
   color: var(--md-sys-color-on-surface-variant);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
   box-shadow: inset 3px 0 0 var(--md-sys-color-warning);
+}
+
+/* --- Bandeau de diff --------------------------------------------------- */
+
+.gl-diff {
+  margin: 16px 16px 0;
+  padding: 16px 20px;
+  border-radius: var(--gl-shape-pane);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.gl-diff-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.gl-diff-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.gl-diff-group {
+  flex: 1 1 200px;
+  padding: 12px 14px;
+  border-radius: var(--gl-shape-finding-card);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border-left: 3px solid var(--md-sys-color-outline);
+}
+
+.gl-diff-group.is-added {
+  border-left-color: var(--md-sys-color-primary);
+}
+
+/* Le cas qu'un cache naïf raterait : signalé comme tel. */
+.gl-diff-group.is-changed {
+  border-left-color: var(--md-sys-color-error);
+}
+
+.gl-diff-group.is-removed {
+  border-left-color: var(--md-sys-color-outline-variant);
+  opacity: 0.75;
+}
+
+.gl-diff-label {
+  margin: 0;
+}
+
+.gl-diff-hint {
+  margin: 2px 0 8px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.gl-diff-names {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gl-diff-group.is-removed .gl-diff-names li {
+  text-decoration: line-through;
+}
+
+/* Marqueur discret : le verdict n'a pas été recalculé. */
+.gl-reused {
+  font-style: italic;
+  opacity: 0.8;
 }
 
 /* --- List-detail ------------------------------------------------------- */

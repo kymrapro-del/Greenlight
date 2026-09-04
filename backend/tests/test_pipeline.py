@@ -144,6 +144,12 @@ RAW_CLASSIFICATIONS: dict[str, tuple[str, bool]] = {
     "4400 North Broadway": ("CAUTION", True),
     "Daniel Reyes": ("CAUTION", False),
     "Coca-Cola": ("CLEAR", True),
+    # Les noms introduits par la réécriture. Ils sont inventés : une recherche
+    # réelle ne leur trouve aucun équivalent, donc `CLEAR`. C'est exactement ce
+    # que le mode diff doit montrer — renommer fait tomber le drapeau.
+    "The Paper Lantern": ("CLEAR", False),
+    "Saint Odile Medical Center": ("CLEAR", False),
+    "Riverton County Courthouse": ("CLEAR", False),
 }
 
 # La table de samples/EXPECTED.md, vérifiée à la main. Quand le pipeline s'en
