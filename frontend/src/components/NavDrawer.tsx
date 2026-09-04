@@ -1,40 +1,46 @@
-import '@material/web/button/filled-tonal-button.js';
-import '@material/web/iconbutton/icon-button.js';
-
 import { Icon } from './Icon';
 
 export interface Thread {
   id: string;
   title: string;
-  subtitle: string;
 }
 
 /**
- * Le volet de navigation, dans l'esprit de Gemini.
+ * Le volet, sur le modèle de Gemini.
  *
- * Un bouton d'action proéminent en haut, puis l'historique. Le volet se replie
- * sous 1200 px : en dessous, la conversation a besoin de toute la largeur.
+ * Trois zones empilées : l'action principale et les entrées de navigation en
+ * haut, l'historique au milieu, le compte en bas. Les entrées sont des lignes
+ * plates — icône + libellé, coin plein arrondi au survol — et non des cartes :
+ * c'est ce qui donne au volet son calme, et ce qui laisse l'historique occuper
+ * la hauteur.
  *
- * Ce n'est pas un `navigation drawer` M3 au sens strict — M3 en attend un quand
- * il y a plusieurs destinations, alors qu'ici tout mène à la même vue. C'est un
- * volet d'historique, bâti sur les mêmes tokens.
+ * Ce n'est pas un `navigation drawer` M3 au sens strict, qui suppose plusieurs
+ * destinations. C'est un volet d'historique, bâti sur les mêmes tokens.
  */
 export function NavDrawer({
   threads,
   activeId,
   open,
   onSelect,
+  onNew,
   onToggle,
 }: {
   threads: Thread[];
-  activeId: string;
+  activeId: string | null;
   open: boolean;
   onSelect: (id: string) => void;
+  onNew: () => void;
   onToggle: () => void;
 }) {
   return (
     <aside className={`gl-drawer ${open ? 'is-open' : 'is-collapsed'}`}>
-      <div className="gl-drawer-head">
+      <header className="gl-drawer-head">
+        {open && (
+          <span className="gl-brand">
+            <span className="gl-mark" aria-hidden="true" />
+            <span className="gl-title-large">GREENLIGHT</span>
+          </span>
+        )}
         <button
           type="button"
           className="gl-icon-button gl-state-layer"
@@ -42,41 +48,70 @@ export function NavDrawer({
           aria-label={open ? 'Replier le volet' : 'Déplier le volet'}
           aria-expanded={open}
         >
-          <Icon name="menu" size={22} />
+          <Icon name="panel" size={20} />
         </button>
-      </div>
+      </header>
 
-      <button type="button" className="gl-new-analysis gl-label-large gl-state-layer">
-        <Icon name="add" size={20} />
-        {open && <span>Nouvelle analyse</span>}
+      <button type="button" className="gl-nav-item is-primary gl-state-layer" onClick={onNew}>
+        <Icon name="compose" size={20} />
+        {open && <span className="gl-label-large">Nouvelle analyse</span>}
       </button>
 
+      <nav className="gl-nav" aria-label="Sections">
+        <button type="button" className="gl-nav-item gl-state-layer">
+          <Icon name="search" size={20} />
+          {open && <span className="gl-label-large">Rechercher une entité</span>}
+        </button>
+        <button type="button" className="gl-nav-item gl-state-layer">
+          <Icon name="library" size={20} />
+          {open && <span className="gl-label-large">Scénarios</span>}
+        </button>
+      </nav>
+
       {open && (
-        <nav className="gl-thread-list" aria-label="Analyses récentes">
-          <p className="gl-label-medium gl-drawer-legend">Récent</p>
+        <div className="gl-recents">
+          <p className="gl-label-medium gl-drawer-legend">Récentes</p>
           {threads.map((thread) => (
             <button
               key={thread.id}
               type="button"
-              className={`gl-thread gl-state-layer ${thread.id === activeId ? 'is-active' : ''}`}
+              className={`gl-recent gl-body-medium gl-state-layer ${
+                thread.id === activeId ? 'is-active' : ''
+              }`}
               aria-current={thread.id === activeId ? 'true' : undefined}
               onClick={() => onSelect(thread.id)}
             >
-              <Icon name="document" size={18} />
-              <span className="gl-thread-text">
-                <span className="gl-body-medium gl-thread-title">{thread.title}</span>
-                <span className="gl-body-small gl-thread-sub">{thread.subtitle}</span>
-              </span>
+              {thread.title}
             </button>
           ))}
-        </nav>
+        </div>
       )}
 
-      {open && (
-        <p className="gl-body-small gl-drawer-foot">
-          Triage en amont, pas un avis juridique.
-        </p>
-      )}
+      <button type="button" className="gl-nav-item gl-state-layer">
+        <Icon name="history" size={20} />
+        {open && <span className="gl-label-large">Activité</span>}
+      </button>
+
+      <div className="gl-account">
+        <span className="gl-avatar-user" aria-hidden="true">
+          K
+        </span>
+        {open && (
+          <>
+            <span className="gl-account-id">
+              <span className="gl-body-medium">Kymra</span>
+              <span className="gl-body-small gl-account-plan">Pré-clearance</span>
+            </span>
+            <button
+              type="button"
+              className="gl-icon-button gl-state-layer"
+              aria-label="Paramètres"
+            >
+              <Icon name="settings" size={18} />
+            </button>
+          </>
+        )}
+      </div>
     </aside>
   );
 }

@@ -31,15 +31,17 @@ body {
   vertical-align: -0.22em;
 }
 
-/* --- Coquille conversationnelle ---------------------------------------- */
+/* --- Coquille conversationnelle ----------------------------------------- */
 
 .gl-shell {
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background: var(--md-sys-color-surface);
 }
 
 .gl-main {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -58,6 +60,7 @@ body {
 .gl-icon-button {
   display: inline-grid;
   place-items: center;
+  flex: none;
   width: 40px;
   height: 40px;
   border: none;
@@ -73,151 +76,248 @@ body {
   cursor: default;
 }
 
-/* --- Volet de navigation ------------------------------------------------ */
+/* --- Volet --------------------------------------------------------------- */
 
+/* Le volet partage le fond de la page : il se distingue par son contenu, pas
+   par un aplat. C'est ce qui lui donne son calme. */
 .gl-drawer {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: var(--md-sys-color-surface-container);
-  color: var(--md-sys-color-on-surface);
+  gap: 2px;
+  padding: 12px 8px;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface-variant);
   transition: width var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-emphasized);
   overflow: hidden;
 }
 
 .gl-drawer.is-open {
-  width: 288px;
+  width: 292px;
 }
 
 .gl-drawer.is-collapsed {
   width: 72px;
+  align-items: center;
 }
 
 .gl-drawer-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 12px 12px;
 }
 
-/* Le bouton d'action principal : une pilule, comme « New chat » chez Gemini. */
-.gl-new-analysis {
+.gl-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 0 18px;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+}
+
+.gl-mark {
+  flex: none;
+  width: 10px;
+  height: 24px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+}
+
+/* Lignes de navigation : icône + libellé, pleine largeur, arrondies au survol.
+   Pas des cartes — c'est ce qui laisse l'historique occuper la hauteur. */
+.gl-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
   border: none;
   border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
+  background: transparent;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
   white-space: nowrap;
   --gl-state-color: var(--md-sys-color-on-surface);
 }
 
-.gl-drawer.is-collapsed .gl-new-analysis {
-  justify-content: center;
-  padding: 0;
-  width: 48px;
+.gl-nav-item.is-primary {
+  margin-bottom: 8px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
 }
 
-.gl-thread-list {
+.gl-drawer.is-collapsed .gl-nav-item {
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+}
+
+.gl-nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 12px;
+}
+
+.gl-recents {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 16px 0 8px;
   overflow-y: auto;
   flex: 1;
 }
 
 .gl-drawer-legend {
-  margin: 4px 0 6px 12px;
+  margin: 0 0 4px 12px;
   color: var(--md-sys-color-on-surface-variant);
 }
 
-.gl-thread {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+/* L'historique est une liste de titres, sans icône ni sous-titre : ce sont des
+   noms de conversations, pas des objets à décrire. */
+.gl-recent {
+  padding: 8px 12px;
   border: none;
   border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   --gl-state-color: var(--md-sys-color-on-surface);
 }
 
-.gl-thread.is-active {
+.gl-recent.is-active {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
   --gl-state-color: var(--md-sys-color-on-secondary-container);
 }
 
-.gl-thread-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.gl-thread-title,
-.gl-thread-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gl-thread-sub {
-  opacity: 0.75;
-}
-
-.gl-drawer-foot {
-  margin: 0;
-  padding: 12px;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-/* --- Barre supérieure --------------------------------------------------- */
-
-.gl-topbar {
+.gl-account {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
-  padding: 12px 24px;
-  background: var(--md-sys-color-surface);
+  margin-top: 4px;
+  padding: 8px 8px 4px;
 }
 
-.gl-topbar h1 {
-  margin: 0;
-  letter-spacing: 0.08em;
-}
-
-.gl-mark {
-  width: 12px;
-  height: 28px;
+.gl-avatar-user {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
   border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-primary);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 500;
 }
 
-.gl-model-chip {
-  padding: 5px 12px;
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-surface-container-high);
+.gl-account-id {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.gl-account-plan {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* --- Conversation ------------------------------------------------------- */
+/* --- Accueil ------------------------------------------------------------- */
+
+.gl-welcome {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 32px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+/* Le halo : une nappe radiale à la couleur de marque, très diffuse. Elle donne
+   sa profondeur à l'écran d'accueil sans rien y ajouter de lisible. */
+.gl-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      54% 40% at 50% 52%,
+      color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      80% 60% at 50% 44%,
+      color-mix(in srgb, var(--md-sys-color-tertiary) 14%, transparent) 0%,
+      transparent 75%
+    );
+}
+
+.gl-greeting {
+  position: relative;
+  margin: 0;
+  font: 400 var(--md-sys-typescale-display-small-size) /
+    var(--md-sys-typescale-display-small-line-height) var(--md-ref-typeface-brand);
+  color: var(--md-sys-color-on-surface);
+  text-align: center;
+}
+
+.gl-greeting-accent {
+  color: var(--md-sys-color-primary);
+}
+
+.gl-welcome-composer {
+  position: relative;
+  width: min(100%, 720px);
+}
+
+.gl-suggestions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: min(100%, 720px);
+}
+
+.gl-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 260px;
+  padding: 16px 18px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--gl-shape-pane);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  text-align: left;
+  cursor: pointer;
+  --gl-state-color: var(--md-sys-color-on-surface);
+}
+
+.gl-suggestion-hint {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* --- Conversation -------------------------------------------------------- */
 
 .gl-conversation {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 24px 24px;
+  padding: 24px 24px 8px;
 }
 
-/* Colonne de lecture : au-delà, l'œil perd la ligne. */
 .gl-conversation-column {
   display: flex;
   flex-direction: column;
@@ -241,8 +341,8 @@ body {
   color: var(--md-sys-color-on-surface);
 }
 
-/* La réponse : pleine colonne, sans bulle. Un rapport entier n'y tiendrait
-   pas, et l'encadrer le ferait paraître secondaire. */
+/* La réponse : pleine colonne, sans bulle. Un rapport entier n'y tiendrait pas,
+   et l'encadrer le ferait paraître secondaire. */
 .gl-turn.is-assistant {
   display: flex;
   gap: 16px;
@@ -274,7 +374,6 @@ body {
   margin: 4px 0 0;
 }
 
-/* Les trois points de l'attente. */
 .gl-pending {
   display: flex;
   gap: 6px;
@@ -338,28 +437,27 @@ body {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* --- Barre de saisie ---------------------------------------------------- */
+/* --- Barre de saisie ----------------------------------------------------- */
 
 .gl-composer {
-  padding: 8px 24px 20px;
+  padding: 8px 24px 16px;
 }
 
 .gl-composer-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   max-width: 860px;
   margin: 0 auto;
-  padding: 8px 8px 8px 12px;
+  padding: 8px 8px 8px 10px;
   border-radius: var(--md-sys-shape-corner-extra-large-increased);
   background: var(--md-sys-color-surface-container-high);
-  box-shadow: var(--md-sys-elevation-level1);
 }
 
 .gl-composer-input {
   flex: 1;
   min-width: 0;
-  padding: 10px 4px;
+  padding: 10px 6px;
   border: none;
   background: transparent;
   color: var(--md-sys-color-on-surface);
@@ -374,9 +472,26 @@ body {
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* Le modèle qui répond, affiché plutôt que caché dans un réglage. */
+.gl-model-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-height: 36px;
+  padding: 0 10px 0 14px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  --gl-state-color: var(--md-sys-color-on-surface);
+}
+
 .gl-send {
   display: grid;
   place-items: center;
+  flex: none;
   width: 40px;
   height: 40px;
   border: none;
@@ -387,17 +502,29 @@ body {
   --gl-state-color: var(--md-sys-color-on-primary);
 }
 
-.gl-send:disabled {
-  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
-  color: color-mix(in srgb, var(--md-sys-color-on-surface) 38%, transparent);
-  cursor: default;
-}
-
 .gl-composer-note {
   max-width: 860px;
-  margin: 8px auto 0;
+  margin: 10px auto 0;
   text-align: center;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+/* --- Adaptatif ----------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .gl-drawer {
+    display: none;
+  }
+
+  .gl-conversation,
+  .gl-composer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .gl-bubble {
+    max-width: 88%;
+  }
 }
 
 /* --- Le rapport, dans la réponse ---------------------------------------- */
