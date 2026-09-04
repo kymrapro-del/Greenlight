@@ -6,7 +6,64 @@
 
 ---
 
+## 0. Comment lire ce document
+
+Ce document décrit deux choses, et il serait malhonnête de les confondre.
+
+| Marque | Signification |
+|:---:|---|
+| 🟢 | **Construit.** Le code existe dans ce dépôt, les tests le couvrent. |
+| 🔵 | **Conçu.** La décision est prise et documentée, rien n'est déployé. |
+| ⚪ | **Écarté.** Étudié, puis coupé — la raison est indiquée. |
+
+Une architecture cible sans mise en œuvre reste un travail utile : elle dit où
+le système va, et pourquoi les raccourcis d'aujourd'hui sont des raccourcis et
+non des impasses. Mais elle ne doit jamais se lire comme un inventaire de ce qui
+tourne. La distinction est portée par ces marques, section par section.
+
+**État au 4 septembre 2026.** Ce qui tourne : le parser Fountain, les huit
+phases du pipeline, la couche ADK, l'API HTTP et l'interface Material 3 —
+en local, et en CI sans un appel réseau. Le reste de ce document est la cible.
+
+---
+
 ## 1. Vue d'ensemble
+
+### 1.1 🟢 Ce qui tourne aujourd'hui
+
+```
+  navigateur
+      │  POST /api/analyze  ·  lit le flux SSE de progression
+      ▼
+  greenlight.api.server            FastAPI, un processus
+      │  passes gardées en mémoire, plafonnées
+      ▼
+  greenlight.pipeline              les 8 phases, en appelant un PhaseHook
+      ├─ ingest/fountain           Fountain → scènes            phase 1
+      ├─ agents/extract            Gemini, une scène = un appel phase 2
+      ├─ agents/dedupe             canonicalisation, sans LLM   phase 3
+      ├─ agents/research           Parallel, fan-out en threads phase 4
+      ├─ agents/classify           Gemini, verdicts sourcés     phase 5
+      ├─ agents/replace            générer → re-vérifier        phase 6
+      ├─ api/report                → la charge utile du rapport phase 7
+      └─ agents/diff               réutiliser d'un jet à l'autre phase 8
+      │
+      ├──▶ Gemini      (Vertex AI ou AI Studio, un drapeau)
+      └──▶ Parallel Search
+              ↑
+        harnais de fixtures : live / record / replay
+```
+
+Un processus, pas de base de données, pas de file. Le fan-out est un
+`ThreadPoolExecutor`, la reprise n'existe pas, et les passes vivent en mémoire.
+C'est suffisant pour un scénario de long métrage et c'est écrit tel quel dans
+`greenlight/store/runs.py`, avec la limite que ça pose.
+
+### 1.2 🔵 La cible, à l'échelle
+
+Ce qui suit n'est pas déployé. C'est la topologie vers laquelle le système va
+quand plusieurs passes tournent en même temps et qu'une reprise doit survivre à
+un redémarrage.
 
 ```
                                   INTERNET
@@ -71,7 +128,7 @@
 
 ---
 
-## 2. Architecture réseau
+## 2. 🔵 Architecture réseau
 
 ### 2.1 VPC
 
@@ -133,7 +190,7 @@ Trafic vers Vertex AI, Firestore, GCS, Document AI et Secret Manager : **Private
 
 ---
 
-## 3. Services Cloud Run
+## 3. 🔵 Services Cloud Run
 
 | Service | Ingress | CPU / RAM | Concurrency | Min / Max | Rôle |
 |---|---|---|---|---|---|
@@ -152,66 +209,90 @@ Chaque service a **son propre service account**. Appels service-à-service authe
 
 ## 4. Le pipeline agentique
 
-```
-PHASE 1  INGEST
-  PDF  → Document AI (Form/Layout Parser) → texte + coordonnées
-  FDX  → parser XML natif
-  Fountain → parser markdown natif           ← chemin le plus fiable
-  ↓ normalisation : scènes {numéro, INT/EXT, lieu, moment, action, dialogue, page}
+### 4.1 🟢 Les huit phases, telles qu'elles tournent
 
-PHASE 2  EXTRACT                                    [Gemini · structured output]
-  batch de 10 scènes par appel, en parallèle
-  → entités typées + contexte de dépiction par occurrence
-  temperature = 0, responseSchema strict
+```
+PHASE 1  INGEST                                     [déterministe]
+  Fountain → parser natif  ·  FDX → parser XML natif
+  ↓ scènes {numéro, INT/EXT, lieu, moment, action, dialogue, page estimée}
+  Le PDF est écarté : voir §12.
+
+PHASE 2  EXTRACT                                    [Gemini · sortie structurée]
+  UNE scène = UN appel, en parallèle sur un ThreadPoolExecutor
+  → entités typées ET contexte de dépiction, par occurrence
+  temperature = 0, responseSchema pydantic strict
+  garde-fou : une entité absente verbatim du texte est écartée avant tout achat
 
 PHASE 3  CANONICALIZE                               [déterministe, pas de LLM]
   normalisation, résolution d'alias, dédup à l'échelle du script
-  300 occurrences → ~120 entités uniques
+  ids stables, pour que la phase 8 puisse comparer deux jets
 
 PHASE 4  RESEARCH                                   [Parallel Search · fan-out]
-  cache-lookup → miss → 1 Cloud Task par entité
-  stratégie de requêtes spécifique par type
-  → résultats + citations, écrits en Firestore
+  pré-verdicts par règle d'abord — 555-01XX, RFC 2606, agences neutres —
+  puis cache global, puis fan-out en threads sur ce qui reste
+  profondeur choisie par entité : `fast` en masse, `advanced` là où le
+  verdict est réellement en jeu
 
-PHASE 5  CLASSIFY                                   [Gemini · structured output]
-  entité + résultats + contexte de scène → verdict + justification + citations
-  temperature = 0
+PHASE 5  CLASSIFY                                   [Gemini · sortie structurée]
+  le modèle ne juge QUE sur les extraits fournis
+  une URL citée mais absente des résultats est écartée
+  un verdict défavorable sans source vérifiable retombe à UNRESOLVED
+  puis la règle de dépiction combine existence et mise en scène
 
 PHASE 6  SUGGEST                                    [Gemini + Parallel]
-  génère un remplacement → le re-cherche → ne le propose que si zéro résultat réel
-  boucle max 3 tentatives
+  téléphone et e-mail : convention professionnelle, sans appel ni recherche
+  le reste : générer un remplacement → le repasser par la même recherche
+  proposé quand même s'il n'est pas vérifiable, mais étiqueté comme tel
+  rien n'est proposé là où renommer serait un mauvais conseil (une licence)
 
-PHASE 7  REPORT
-  rapport de clearance + annotations en marge → Firestore + PDF
+PHASE 7  REPORT                                     [déterministe]
+  `api/report.to_payload` — un seul endroit décide de la forme envoyée
+  une scène perdue apparaît dans la charge utile ; une passe entièrement
+  perdue est une erreur, pas un rapport à zéro entité
 
-PHASE 8  DIFF  (runs suivants)
-  hash des entités v(n) vs v(n-1) → ne recherche que le delta
+PHASE 8  DIFF                                       [déterministe]
+  un verdict n'est repris que si l'entité, sa pire dépiction ET la version
+  du prompt sont inchangées ; tout le reste repasse dans le pipeline
 ```
 
-### 4.1 Structure ADK
+**Déterminisme.** Le brief du hackathon exige un agent déterministe :
+`temperature = 0`, `responseSchema` sur toutes les sorties structurées, phases
+1, 3, 7 et 8 en code pur, et `prompt_version` stocké sur chaque finding pour que
+deux passes soient comparables.
+
+**Modèles.** Gemini sur Vertex AI ou AI Studio selon un seul drapeau. Les
+identifiants exacts sont dans `.env`, jamais en dur, et
+`greenlight.tools.models` demande à l'API quels modèles les credentials
+atteignent réellement plutôt que de se fier à une doc.
+
+### 4.2 🟢 Structure ADK
 
 ```python
-root = SequentialAgent(
+Workflow(
     name="greenlight_clearance",
-    sub_agents=[
-        IngestAgent(),                                  # phase 1
-        ParallelAgent(sub_agents=[ExtractionAgent()]),  # phase 2, batché
-        CanonicalizeAgent(),                            # phase 3
-        ResearchDispatchAgent(),                        # phase 4, enqueue + await
-        ClassificationAgent(),                          # phase 5
-        SuggestionAgent(),                              # phase 6
-        ReportAgent(),                                  # phase 7
+    nodes=[
+        WorkflowNode(agent=IngestAgent()),         # phase 1
+        WorkflowNode(agent=ExtractAgent()),        # phase 2
+        WorkflowNode(agent=CanonicalizeAgent()),   # phase 3
+        WorkflowNode(agent=ResearchAgent()),       # phase 4
+        WorkflowNode(agent=ClassifyAgent()),       # phase 5
     ],
 )
 ```
 
-Tools exposés : `parallel_search`, `firestore_read`, `firestore_write`, `docai_parse`, `enqueue_research_task`.
+Des agents de workflow, pas un `LlmAgent` : l'ordre des phases est connu, ne
+dépend d'aucune entrée, et un rapport de clearance doit être reproductible.
+`Workflow` et non `SequentialAgent`, que l'ADK 2.8 déprécie.
 
-**Modèle** : Gemini sur Vertex AI. Épingle l'ID exact du modèle dans la config au moment du build — vérifie la version courante dans la doc Vertex AI, ne code pas un identifiant en dur depuis une doc obsolète.
+La couche ADK ne réimplémente rien — elle enveloppe les mêmes fonctions que la
+bibliothèque, et un test affirme que les deux chemins rendent les mêmes verdicts,
+entité par entité. Les clients vivants sont portés par `ClearanceDeps` et non par
+l'état de session, qui doit rester sérialisable.
 
-**Déterminisme** — le brief du hackathon exige un agent déterministe. Concrètement : `temperature = 0`, `responseSchema` sur toutes les sorties structurées, phase 3 en code pur sans LLM, et versionnage des prompts (`prompt_version` stocké sur chaque finding, pour que deux runs soient comparables).
+Outils exposés en `FunctionTool` : `choose_search_mode`, `build_entity_search`,
+`rule_pre_verdict`.
 
-### 4.2 Fan-out et reprise
+### 4.3 🔵 Fan-out et reprise, à l'échelle
 
 ```
 orchestrator
@@ -237,7 +318,7 @@ Pas d'attente synchrone : aucune requête ne peut dépasser le timeout Cloud Run
 
 ---
 
-## 5. Données
+## 5. 🔵 Données
 
 ### 5.1 Firestore (Native mode)
 
@@ -298,7 +379,7 @@ Uniform bucket-level access, public access prevention **enforced**, versioning a
 
 ---
 
-## 6. Sécurité et IAM
+## 6. 🔵 Sécurité et IAM
 
 ### 6.1 Authentification
 
@@ -335,13 +416,25 @@ Aucun rôle primitif (`editor`, `owner`). Aucune clé de SA exportée : identit�
 
 ---
 
-## 7. Frontend — Material 3 intégral
+## 7. 🟢 Frontend — Material 3
 
 ### 7.1 Stack
 
 React 19 + TypeScript + Vite. Que du M3 : aucun Tailwind, aucun shadcn, aucun hex en dur.
 
-**`@material/web`** (Material Web Components, l'implémentation M3 officielle) est utilisé là où il a le composant : `md-ripple` et `md-focus-ring` pour la couche d'état de chaque surface interactive, `md-filter-chip` et `md-chip-set` pour les filtres de verdict. La librairie est en maintenance et n'expose qu'une vingtaine de composants — ni carte, ni composer, ni volet de navigation — donc la coquille conversationnelle (volet, saisie, tours, rapport) est bâtie sur les **tokens** M3, pas sur des composants. C'est le seul écart, et il tient à ce que la librairie ne couvre pas.
+**`@material/web`** (Material Web Components, l'implémentation M3 officielle) est utilisé là où il a le composant :
+
+| Composant | Rôle |
+|---|---|
+| `md-ripple` | la couche d'état complète de chaque surface interactive, onde de pression comprise |
+| `md-focus-ring` | l'anneau de focus, affiché sur `:focus-visible` seulement |
+| `md-chip-set` + `md-filter-chip` | les filtres de verdict, qui *sont* des filter chips M3 |
+| `md-linear-progress` | une passe en cours, en mode indéterminé |
+| `md-outlined-text-field` | la recherche d'entité dans le rapport |
+
+La librairie est en maintenance et n'expose qu'une vingtaine de composants — ni carte, ni composer, ni volet de navigation — donc la coquille conversationnelle (volet, saisie, tours, rapport) est bâtie sur les **tokens** M3, pas sur des composants. C'est le seul écart, et il tient à ce que la librairie ne couvre pas. Rien n'est importé pour allonger la liste : `md-divider` ne l'est pas, parce que la mise en page ne trace aucun filet.
+
+Les icônes sont des SVG inline plutôt que la police Material Symbols : une police d'icônes qui ne charge pas affiche le *nom* de l'icône en toutes lettres au milieu de l'interface.
 
 `@material/material-color-utilities` génère le schéma dynamique à partir d'une couleur source.
 
@@ -366,34 +459,67 @@ Les contrastes sont garantis par construction — les paires `container` / `on-c
 ### 7.3 Typographie
 
 - **Roboto Flex** — l'axe variable de M3, sur toute l'interface. Échelle : `display-large` → `label-small`.
-- **Courier Prime** — uniquement dans le panneau scénario. Les scénarios s'écrivent en Courier 12pt depuis toujours ; utiliser autre chose casserait immédiatement la crédibilité auprès d'un juge qui connaît le métier.
+- **Courier Prime** — uniquement là où du scénario est cité : les occurrences dans le détail d'une entité. Les scénarios s'écrivent en Courier 12pt depuis toujours ; utiliser autre chose casserait la crédibilité auprès d'un juge qui connaît le métier.
 
 ### 7.4 Layout — window size classes
 
-| Classe | Largeur | Navigation | Layout canonique |
-|---|---|---|---|
-| Compact | < 600 | Navigation bar (bas) | pane unique + bottom sheet |
-| Medium | 600–839 | Navigation rail | list-detail replié |
-| Expanded | 840–1199 | Navigation rail | **list-detail** |
-| Large / XL | ≥ 1200 | Navigation drawer | **supporting pane** (script + findings côte à côte) |
+Le volet de navigation change de nature avec la classe de fenêtre, comme M3 le
+demande. C'est vérifié par le test de bout en bout, aux deux largeurs.
+
+| Classe | Largeur | Volet | État |
+|---|---|---|:---:|
+| Compact | < 600 | **modal** — se superpose, voile, se referme au clic dehors | 🟢 |
+| Medium | 600–839 | modal, même comportement | 🟢 |
+| Expanded | ≥ 840 | **permanent**, posé à côté du contenu | 🟢 |
+| Large / XL | ≥ 1200 | supporting pane — scénario et rapport côte à côte | 🔵 |
+
+Aucune navigation rail : M3 en prévoit une pour trois à sept destinations, et
+l'application en a une. Un rail avec un seul bouton serait du décor.
 
 ### 7.5 Écrans
 
-1. **Dashboard** — grille de `md-elevated-card`, FAB « Nouveau scénario », large top app bar qui se réduit au scroll.
-2. **Upload** — zone drag & drop, détection de format, `md-linear-progress`.
-3. **Run** — stepper des 7 phases, compteur live via `onSnapshot`, progression déterminée dès la phase 4.
-4. **Rapport** *(écran principal)* — list-detail. Gauche : liste filtrable, `md-filter-chip` par verdict et par type, badges de compte. Droite : détail du finding, citations cliquables, remplacement suggéré, bouton « Appliquer ».
-5. **Script** — supporting pane. Panneau Courier avec surlignage inline des entités, clic → détail à droite.
-6. **Diff** — v(n-1) vs v(n), `md-tabs` secondaires, seules les entités modifiées.
-7. **Export** — PDF du rapport de clearance.
+L'interface est **un fil de conversation**, pas une suite d'écrans. C'est la
+forme que prend un assistant, et le rapport de clearance est rendu *dans* la
+réponse plutôt que sur une page à part.
+
+| État | Ce qu'il fait | État |
+|---|---|:---:|
+| **Accueil** | titre, saisie, et les scénarios livrés en amorces. Chaque amorce lance une vraie passe. | 🟢 |
+| **Passe en cours** | `md-linear-progress` indéterminé et les phases qui se cochent, dès que le serveur les annonce. | 🟢 |
+| **Rapport dans la réponse** | statistiques, recherche d'entité, filtres par verdict, entités dépliables sur place avec sources, occurrences et remplacement. | 🟢 |
+| **Diff** | bandeau de comparaison, entités reprises marquées comme telles. | 🟢 |
+| **Question de suivi** | la saisie change de régime et le dit ; la réponse s'ancre dans le rapport. | 🟢 |
+| **Panneau scénario** | Courier, surlignage inline des entités, clic → l'entité s'ouvre. | 🔵 |
 
 ### 7.6 Motion
 
-Tokens M3 exclusivement : `emphasized` (600 ms) pour les transitions d'écran, `standard` (300 ms) pour les changements d'état, `emphasized-decelerate` pour les entrées. Transitions **shared axis X** entre list et detail, **fade through** entre onglets. `prefers-reduced-motion` respecté globalement.
+Tokens M3 exclusivement : `emphasized` pour le morphing de forme d'une entité qui s'ouvre, `emphasized-decelerate` pour l'entrée du volet modal, `standard` pour les changements d'état. `prefers-reduced-motion` coupe les transitions, partout.
+
+L'échelle de rayons porte les dix crans, dont les trois ajoutés par M3 Expressive que la librairie ne livre pas encore. Une entité ouverte s'arrondit franchement : le rapport signale ce qui est ouvert indépendamment de la couleur.
 
 ---
 
 ## 8. API
+
+### 8.1 🟢 Ce qui est servi
+
+```
+GET    /api/health          état de l'instance : appelle-t-elle vraiment les API,
+                            combien d'appels sait-elle rejouer, peut-elle analyser
+GET    /api/samples         les scénarios livrés, avec leur vrai nombre de scènes
+POST   /api/analyze         un scénario en entrée, les 8 phases, et la progression
+                            diffusée en text/event-stream phase par phase ;
+                            le rapport est le dernier événement du flux
+GET    /api/runs/{runId}    une passe terminée, pour qu'un fil survive à un F5
+POST   /api/ask             une question de suivi, répondue à partir de ce
+                            rapport et de rien d'autre
+```
+
+Pas d'authentification, pas de cookie : `CORS: *` est le réglage honnête pour ce
+qui est servi. Un scénario déposé est parsé en mémoire et n'est jamais écrit sur
+disque.
+
+### 8.2 🔵 Ce que la cible ajoute
 
 ```
 POST   /api/projects                          → {projectId}
@@ -404,20 +530,18 @@ GET    /api/jobs/:jobId                       → état        (fallback si pas 
 GET    /api/projects/:pid/drafts/:did/findings?verdict=&type=&cursor=
 POST   /api/findings/:fid/apply               → applique le remplacement
 GET    /api/projects/:pid/drafts/:did/diff?against=:draftId
-POST   /api/projects/:pid/drafts/:did/report  → {reportUrl}  (signed URL PDF)
 ```
 
 Interne (OIDC uniquement) :
 ```
-POST   /internal/orchestrate      ← Cloud Tasks
-POST   /internal/research         ← Cloud Tasks (1 entité)
+POST   /internal/orchestrate       ← Cloud Tasks
+POST   /internal/research          ← Cloud Tasks (1 entité)
 POST   /internal/research-complete ← Pub/Sub push
-POST   /internal/render           ← Cloud Tasks
 ```
 
 ---
 
-## 9. Observabilité
+## 9. 🔵 Observabilité
 
 - **Cloud Logging** — logs structurés JSON, corrélés par `jobId` et `traceId`.
 - **Cloud Trace** — traces distribuées de bout en bout ; propagation du contexte à travers Cloud Tasks (indispensable pour voir où passent les 8 minutes).
@@ -431,10 +555,30 @@ POST   /internal/render           ← Cloud Tasks
 
 ## 10. CI/CD
 
+### 10.1 🟢 Ce qui tourne
+
 ```
-GitHub push
-  → Cloud Build
-      ├─ lint + tests unitaires
+GitHub push / pull request
+  → .github/workflows/ci.yml
+      ├─ quality   ruff check · ruff format --check · pytest    (backend)
+      ├─ frontend  oxlint · tsc -b · vite build
+      ├─ e2e       Playwright, 5 parcours × 2 largeurs, contre le vrai
+      │            serveur et le bundle de production
+      └─ secrets   aucun .env suivi, aucune clé dans les .example
+```
+
+`FIXTURE_MODE=replay` partout : la CI ne consomme ni token ni crédit, et le
+serveur du test de bout en bout script ses transports depuis l'arbre de tests —
+jamais depuis le paquet livré, qui ne contient aucun mode « démonstration ».
+
+`.github/workflows/deploy.yml` déploie sur Cloud Run à chaque CI verte sur
+`main`, par Workload Identity Federation — aucune clé de compte de service dans
+le dépôt. Le job s'ignore proprement tant que les variables GCP ne sont pas
+renseignées, plutôt que d'échouer en rouge.
+
+### 10.2 🔵 Ce que la cible ajoute
+
+```
       ├─ build images → Artifact Registry (scan de vulnérabilités)
       ├─ terraform plan/apply (infra)
       ├─ deploy Cloud Run --no-traffic --tag=candidate
@@ -442,59 +586,99 @@ GitHub push
       └─ bascule 100 % du trafic
 ```
 
-Infrastructure en **Terraform**, intégralement. Pas de clic dans la console : un juge qui regarde le repo doit pouvoir reconstruire l'environnement.
+Infrastructure en **Terraform**, intégralement. Pas de clic dans la console : un
+juge qui regarde le repo doit pouvoir reconstruire l'environnement.
 
 ---
 
 ## 11. Coûts
 
-Estimation pour **un scénario de 100 pages, ~120 entités uniques, cache froid** :
+### 11.1 🟢 Mesuré, sur le scénario de test
 
-| Poste | Volume | Ordre de grandeur |
+12 pages, 14 scènes, 26 entités canoniques, cache froid.
+
+| Poste | Volume | Mesuré |
 |---|---|---|
-| Document AI | 100 pages | quelques centimes |
-| Gemini extraction | ~15 appels, contexte moyen | faible |
-| Parallel Search | ~120 requêtes | **poste dominant** |
-| Gemini classification | ~120 appels courts | faible |
-| Cloud Run | ~10 min cumulées | négligeable |
-| Firestore / GCS | quelques milliers d'opérations | négligeable |
+| Gemini extraction | 14 appels — une scène, un appel | compteur de tokens dans `usage_summary()` |
+| Gemini classification | 21 appels courts | idem |
+| Recherches Parallel évitées par règle | 5 entités sur 26 | **0 crédit** |
+| Recherches Parallel facturées | 21 | poste dominant |
+| Entités hallucinées écartées avant achat | 14 | **0 crédit** |
 
-Avec le cache chaud, le nombre de requêtes Parallel chute fortement — c'est là que se joue la viabilité économique. Vérifie la grille tarifaire Parallel avant de chiffrer quoi que ce soit en public, et **mesure ton coût réel sur un vrai scénario** plutôt que de l'estimer : un chiffre mesuré dans la vidéo vaut dix fois une projection.
+Le coût en dollars n'est **pas** affiché tant que les prix au million de tokens
+ne sont pas renseignés dans l'environnement. Un montant inventé serait pire que
+pas de montant : le chiffre annoncé dans la démo doit tenir sous vérification.
 
-Les 100 $ de crédits GCP du hackathon couvrent largement le développement et la démo.
+Sur la réécriture, le diff reprend 22 verdicts sur 27 — **81 % de la recherche
+évitée**, mesuré, pas estimé.
+
+### 11.2 🔵 Projeté, sur un long métrage
+
+100 pages, ~180 entités, cache froid, extrapolé depuis la répartition
+`fast` / `advanced` mesurée ci-dessus.
+
+| Poste | Ordre de grandeur |
+|---|---|
+| Parallel Search | **poste dominant** |
+| Gemini extraction + classification | faible |
+| Cloud Run | négligeable, `min-instances = 0` |
+
+Avec le cache chaud, le nombre de requêtes Parallel chute fortement — c'est là
+que se joue la viabilité économique. **Mesurer sur un vrai scénario** plutôt que
+d'estimer : un chiffre mesuré dans la vidéo vaut dix fois une projection.
+
+### 11.3 ⚪ Ce qu'on n'allume pas
+
+`min-instances = 0` pendant tout le développement : une instance allumée en
+permanence est facturée en continu et sort du free tier. À passer à 1 la veille
+du jugement seulement, pour épargner un démarrage à froid aux juges, puis à
+remettre à 0.
+
+Un budget d'alerte à 5 € est posé avant la première ligne de code, et le projet
+GCP est supprimé une fois le jugement terminé — c'est la seule garantie qu'aucun
+service oublié ne tourne.
 
 ---
 
-## 12. Plan de build — 6 jours
+## 12. ⚪ Écarté, et pourquoi
 
-| Jour | Livrable |
+Ces choix figuraient dans la première version de ce document. Ils ont été
+coupés, et il vaut mieux le dire que laisser croire qu'ils existent.
+
+| Écarté | Raison |
 |---|---|
-| **1** | Terraform : VPC, NAT, Cloud Run × 2, Firestore, buckets, Secret Manager. Parser Fountain. Un appel Gemini d'extraction qui marche. |
-| **2** | Pipeline phases 1→3 de bout en bout. Modèle de données Firestore figé. |
-| **3** | Intégration Parallel + fan-out Cloud Tasks + cache. Phases 4→5. |
-| **4** | Squelette M3 : thème, navigation, écrans Upload / Run / Rapport. Progression live. |
-| **5** | Phases 6→8 : suggestions vérifiées, rapport PDF, **mode diff**. ALB + Cloud Armor + domaine. |
-| **6** | Polish M3, README + licence, **tournage de la vidéo 3 min**, soumission Devpost. |
+| **Parsing PDF / Document AI** | Facturé à la page, et chronophage à fiabiliser. Fountain et FDX couvrent le format dans lequel un scénario s'écrit. |
+| **Export PDF du rapport** | Le rapport à l'écran suffit, et le chat le rend consultable. |
+| **Load Balancer global + Cloud Armor** | ~23 $/mois dès la première minute, zéro point au jury. Cloud Run expose directement. |
+| **Cloud NAT + VPC** | ~32 $/mois. L'egress Cloud Run par défaut fait le travail. |
+| **Firestore + Cloud Tasks + Pub/Sub** | Un seul processus suffit à la charge actuelle. Le store en mémoire porte sa propre limite, écrite dans le module. |
+| **Extension Google Docs** | Hors budget temps. |
+| **VPC Service Controls** | Documenté ci-dessus, pas construit. |
 
-**Chemin critique** : le mode diff. C'est lui qui matérialise l'argument *shift-left* et qui différencie ton projet d'un simple « LLM + recherche web ». Si tu dois couper, coupe le PDF, coupe l'extension Google Docs — garde le diff.
-
-**Ne repousse pas la vidéo au jour 6 au soir.** Tourne une version brouillon dès le jour 4 : ça révèle immédiatement ce qui manque à la démo.
+Le fil commun : rien de tout cela ne rend un verdict meilleur. Ce qui rend un
+verdict meilleur, c'est la règle de dépiction, la vérification des citations et
+le diff — et c'est là qu'est allé le temps.
 
 ---
 
 ## 13. Conformité hackathon
 
-| Exigence | Réponse |
-|---|---|
-| Gemini + Google Cloud appelés au runtime | `google-adk` + `google-genai`, importés et appelés dans `gl-orchestrator` |
-| Parallel appelé au runtime | SDK `parallel-web` dans `gl-research-worker` |
-| Aucune IA non-Google | Gemini uniquement. **Aucun modèle OpenAI / Anthropic / autre dans le produit.** |
-| Plateforme web | SPA hébergée derrière l'ALB |
-| URL du projet hébergé | domaine public servi par l'ALB |
-| Repo public + licence | GitHub, licence Apache 2.0 à la racine, détectable dans « About » |
-| Projet nouveau | créé pendant la période du concours |
-| Équipe ≤ 4 | ok |
-| Agent déterministe multi-étapes | 8 phases, `temperature = 0`, schémas stricts, prompts versionnés |
+| Exigence | État | Réponse |
+|---|:---:|---|
+| Gemini + Google Cloud appelés au runtime | 🟡 | `google-adk` + `google-genai` importés et appelés par `greenlight.agents.gemini`. **Aucune fixture Gemini enregistrée à ce jour** : le chemin réel n'a pas encore été exercé faute de credentials. |
+| Parallel appelé au runtime | 🟢 | SDK `parallel-web`, appelé par `greenlight.tools.parallel_search`. Une réponse réelle est enregistrée dans `fixtures/`. |
+| Aucune IA non-Google | 🟢 | Gemini uniquement. Aucun SDK OpenAI / Anthropic / autre, ni en Python ni en JavaScript — vérifiable par `grep`. |
+| Plateforme web | 🟢 | SPA Material 3 + API HTTP. |
+| URL du projet hébergé | 🔴 | Pas encore déployée. |
+| Repo public + licence | 🟢 | GitHub public, Apache 2.0 détectée dans « About ». |
+| Projet nouveau | 🟢 | créé pendant la période du concours. |
+| Équipe ≤ 4 | 🟢 | — |
+| Agent déterministe multi-étapes | 🟢 | 8 phases, `temperature = 0`, schémas stricts, prompts versionnés. |
+
+Les deux lignes qui ne sont pas vertes le sont pour la même raison : il manque
+`GOOGLE_API_KEY` et `PARALLEL_API_KEY`. Un passage en `FIXTURE_MODE=record` les
+règle toutes les deux, et `/api/health` dit à l'écran, en permanence, si
+l'instance appelle réellement les API ou rejoue un disque.
 
 ---
 
