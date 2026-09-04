@@ -134,7 +134,7 @@ export default function App() {
               <button
                 key={draft.id}
                 type="button"
-                className="gl-draft-option gl-label-large"
+                className="gl-draft-option gl-label-large gl-state-layer"
                 aria-pressed={draft.id === draftId}
                 onClick={() => setDraftId(draft.id)}
               >
@@ -164,7 +164,7 @@ export default function App() {
 
       <main className="gl-panes">
         <section className="gl-pane gl-pane-list" aria-label="Liste des entités">
-          <md-chip-set class="gl-filters" aria-label="Filtrer par verdict">
+          <md-chip-set className="gl-filters" aria-label="Filtrer par verdict">
             {VERDICTS.filter((v) => counts[v] > 0).map((verdict) => (
               <md-filter-chip
                 key={verdict}

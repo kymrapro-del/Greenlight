@@ -22,6 +22,10 @@ declare module 'react' {
       'md-chip-set': CustomElementProps;
       'md-filter-chip': CustomElementProps<{ label?: string; selected?: boolean }>;
       'md-circular-progress': CustomElementProps<{ indeterminate?: boolean }>;
+      'md-list': CustomElementProps;
+      'md-list-item': CustomElementProps<{ type?: 'text' | 'button' | 'link'; href?: string }>;
+      'md-divider': CustomElementProps<{ inset?: boolean }>;
+      'md-ripple': CustomElementProps<{ for?: string }>;
     }
   }
 }

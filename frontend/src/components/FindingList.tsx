@@ -1,14 +1,22 @@
+import '@material/web/list/list.js';
+import '@material/web/list/list-item.js';
+import '@material/web/divider/divider.js';
+
 import { VERDICT_STYLES, type Verdict } from '../theme/verdicts';
 import { TYPE_LABELS, type Finding } from '../types';
 import { VerdictChip } from './VerdictChip';
 
 /**
- * Le volet liste du layout list-detail.
+ * Le volet liste, sur `md-list` / `md-list-item`.
+ *
+ * Ce sont les composants de la librairie officielle, pas une liste faite main.
+ * La différence n'est pas cosmétique : `md-list-item` en `type="button"` apporte
+ * le ripple, la state layer et l'anneau de focus de M3, plus la sémantique
+ * clavier — flèches haut/bas, `Home`, `End` — que `md-list` gère pour nous. Une
+ * réimplémentation aurait eu à refaire tout ça, moins bien.
  *
  * Chaque ligne porte une barre latérale à la couleur du verdict : la sévérité
- * se lit au balayage, avant même d'avoir lu un nom. La sélection déclenche le
- * morphing de forme d'Expressive — le rayon s'ouvre, ce qui donne un retour
- * indépendant de la couleur.
+ * se lit au balayage, avant même d'avoir lu un nom.
  */
 export function FindingList({
   findings,
@@ -20,55 +28,58 @@ export function FindingList({
   onSelect: (id: string) => void;
 }) {
   if (findings.length === 0) {
-    return (
-      <p className="gl-body-medium gl-empty">
-        Aucune entité ne correspond à ces filtres.
-      </p>
-    );
+    return <p className="gl-body-medium gl-empty">Aucune entité ne correspond à ces filtres.</p>;
   }
 
   return (
-    <ul className="gl-finding-list" role="listbox" aria-label="Entités analysées">
-      {findings.map((finding) => {
+    <md-list className="gl-finding-list" aria-label="Entités analysées">
+      {findings.map((finding, i) => {
         const selected = finding.id === selectedId;
         return (
-          <li key={finding.id}>
-            <button
+          <div key={finding.id}>
+            {i > 0 && <md-divider inset />}
+            <md-list-item
               type="button"
-              role="option"
-              aria-selected={selected}
-              data-selected={selected}
-              className="gl-finding-row gl-shape-morph"
+              className="gl-finding-row"
+              data-selected={selected ? 'true' : undefined}
+              aria-current={selected ? 'true' : undefined}
               onClick={() => onSelect(finding.id)}
             >
               <span
+                slot="start"
                 className="gl-finding-rail"
                 style={{ background: VERDICT_STYLES[finding.verdict as Verdict].container }}
                 aria-hidden="true"
               />
-              <span className="gl-finding-body">
-                <span className="gl-finding-head">
-                  <span className="gl-title-medium gl-finding-name">{finding.name}</span>
-                  <VerdictChip verdict={finding.verdict as Verdict} dense />
-                </span>
-                <span className="gl-body-small gl-finding-meta">
-                  {TYPE_LABELS[finding.type] ?? finding.type}
-                  {' · '}
-                  {finding.scenes.length === 1
-                    ? `scène ${finding.scenes[0]}`
-                    : `scènes ${finding.scenes.join(', ')}`}
-                  {finding.escalatedFrom ? ' · verdict remonté' : ''}
-                  {finding.reusedFromPreviousDraft && (
-                    <span className="gl-reused" title="Verdict repris de la version précédente : rien n'a été recherché à nouveau">
-                      {' · '}repris
-                    </span>
-                  )}
-                </span>
+
+              <span slot="headline" className="gl-finding-name">
+                {finding.name}
               </span>
-            </button>
-          </li>
+
+              <span slot="supporting-text" className="gl-finding-meta">
+                {TYPE_LABELS[finding.type] ?? finding.type}
+                {' · '}
+                {finding.scenes.length === 1
+                  ? `scène ${finding.scenes[0]}`
+                  : `scènes ${finding.scenes.join(', ')}`}
+                {finding.escalatedFrom ? ' · verdict remonté' : ''}
+                {finding.reusedFromPreviousDraft && (
+                  <span
+                    className="gl-reused"
+                    title="Verdict repris de la version précédente : rien n'a été recherché à nouveau"
+                  >
+                    {' · '}repris
+                  </span>
+                )}
+              </span>
+
+              <span slot="end">
+                <VerdictChip verdict={finding.verdict as Verdict} dense />
+              </span>
+            </md-list-item>
+          </div>
         );
       })}
-    </ul>
+    </md-list>
   );
 }

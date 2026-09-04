@@ -9,6 +9,8 @@
 @import './theme/generated-color.css';
 @import './theme/shape.css';
 @import './theme/motion.css';
+@import './theme/elevation.css';
+@import './theme/state.css';
 @import './theme/typography.css';
 
 * {
@@ -47,16 +49,21 @@ body {
 
 /* --- Top app bar ------------------------------------------------------- */
 
+/* Small top app bar : 64dp de hauteur utile et 16dp de marge horizontale,
+   comme la spec. L'élévation la détache du contenu au lieu d'un trait. */
 .gl-topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 20px 24px;
+  min-height: 64px;
+  padding: 12px 16px;
   background: var(--md-sys-color-surface-container);
   color: var(--md-sys-color-on-surface);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: var(--md-sys-elevation-level2);
+  position: relative;
+  z-index: 2;
 }
 
 .gl-topbar-identity {
@@ -107,7 +114,10 @@ body {
 }
 
 .gl-draft-option {
+  /* 40dp de haut : la cible tactile minimale d'un segmented button M3. */
+  min-height: 40px;
   padding: 8px 16px;
+  --gl-state-color: var(--md-sys-color-on-surface);
   border: none;
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
@@ -121,18 +131,14 @@ body {
   border-left: 1px solid var(--md-sys-color-outline);
 }
 
-.gl-draft-option:hover {
-  background: var(--md-sys-color-surface-container-high);
-}
-
 .gl-draft-option[aria-pressed='true'] {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
+  --gl-state-color: var(--md-sys-color-on-secondary-container);
 }
 
 .gl-draft-option:focus-visible {
-  outline: 3px solid var(--md-sys-color-primary);
-  outline-offset: -3px;
+  outline: none;
 }
 
 .gl-metric dt,
@@ -243,7 +249,7 @@ body {
 
 .gl-panes {
   display: grid;
-  grid-template-columns: minmax(320px, 400px) 1fr;
+  grid-template-columns: minmax(340px, 440px) 1fr;
   gap: 16px;
   flex: 1;
   align-items: start;
@@ -254,6 +260,7 @@ body {
   background: var(--md-sys-color-surface-container-low);
   border-radius: var(--gl-shape-pane);
   padding: 12px;
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
 .gl-pane-detail {
@@ -269,80 +276,66 @@ body {
 
 /* --- Liste ------------------------------------------------------------- */
 
+/* `md-list` et `md-list-item` apportent le ripple, la state layer, l'anneau de
+   focus et la navigation clavier. Il ne reste ici que ce qui est propre à
+   GREENLIGHT : la couleur de sélection, la barre de sévérité et le morphing. */
+/* `md-list-item` apporte le ripple, la state layer aux opacités de la spec,
+   l'anneau de focus et la navigation clavier. Il ne reste ici que ce qui est
+   propre à GREENLIGHT.
+
+   Le composant ne peint pas son fond — son `:host` est un simple flex et son
+   conteneur interne hérite du rayon. La sélection se pose donc sur l'hôte, et
+   la state layer se superpose par-dessus au lieu de le remplacer : c'est
+   exactement le modèle M3, et c'est ce qui manquait avant. */
 .gl-finding-list {
-  list-style: none;
-  margin: 0;
+  --md-list-container-color: transparent;
+  --md-list-item-leading-space: 12px;
+  --md-list-item-trailing-space: 12px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .gl-finding-row {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px 10px 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  overflow: hidden;
+  border-radius: var(--gl-shape-finding-card);
   transition:
-    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
-    border-radius var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
-}
-
-.gl-finding-row:hover {
-  background: var(--md-sys-color-surface-container-high);
+    border-radius var(--md-sys-motion-duration-medium2)
+      var(--md-sys-motion-easing-emphasized),
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .gl-finding-row[data-selected='true'] {
   background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  --md-list-item-label-text-color: var(--md-sys-color-on-secondary-container);
+  --md-list-item-supporting-text-color: var(--md-sys-color-on-secondary-container);
+  /* La state layer prend la couleur « on » du conteneur sélectionné, sinon
+     elle serait invisible dessus. */
+  --md-list-item-hover-state-layer-color: var(--md-sys-color-on-secondary-container);
+  --md-list-item-pressed-state-layer-color: var(--md-sys-color-on-secondary-container);
+  /* Le rayon s'ouvre : un retour de sélection indépendant de la couleur. */
+  border-radius: var(--gl-shape-hero);
 }
 
-.gl-finding-row:focus-visible {
-  outline: 3px solid var(--md-sys-color-primary);
-  outline-offset: -3px;
+@media (prefers-reduced-motion: reduce) {
+  .gl-finding-row {
+    transition: none;
+  }
 }
 
 /* La barre de sévérité : le rapport se lit au balayage. */
 .gl-finding-rail {
-  flex: 0 0 6px;
-  align-self: stretch;
+  display: block;
+  width: 6px;
+  height: 36px;
   border-radius: var(--md-sys-shape-corner-full);
 }
 
-.gl-finding-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
-
-.gl-finding-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.gl-finding-name {
+/* Le volet est étroit : les deux lignes restent des lignes. Sans cela une
+   entité au nom long fait grandir la ligne et la liste perd son rythme. */
+.gl-finding-name,
+.gl-finding-meta {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.gl-finding-meta {
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.gl-finding-row[data-selected='true'] .gl-finding-meta {
-  color: inherit;
-  opacity: 0.85;
 }
 
 .gl-empty {

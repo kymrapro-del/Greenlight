@@ -1,0 +1,33 @@
+/**
+ * Élévation M3 — les six niveaux.
+ *
+ * `@material/web` calcule ces ombres à la volée dans son composant
+ * `md-elevation`, à partir du niveau et d'une paire d'ombres : une ombre *key*
+ * à 30 % d'opacité, courte et contrastée, et une ombre *ambient* à 15 %, plus
+ * large et plus diffuse. Les valeurs ci-dessous sont ce que ces formules
+ * produisent pour chaque niveau, écrites une fois pour être utilisables sur
+ * n'importe quelle surface.
+ *
+ * L'élévation porte la hiérarchie de profondeur, comme le rayon porte celle de
+ * la taille : ce qui flotte au-dessus du contenu monte, ce qui le contient
+ * reste bas. Un rapport de clearance n'a pas besoin d'aller au-delà du niveau 2.
+ */
+
+:root {
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1:
+    0px 1px 2px 0px rgb(from var(--md-sys-color-shadow) r g b / 0.3),
+    0px 1px 3px 1px rgb(from var(--md-sys-color-shadow) r g b / 0.15);
+  --md-sys-elevation-level2:
+    0px 1px 2px 0px rgb(from var(--md-sys-color-shadow) r g b / 0.3),
+    0px 2px 6px 2px rgb(from var(--md-sys-color-shadow) r g b / 0.15);
+  --md-sys-elevation-level3:
+    0px 1px 3px 0px rgb(from var(--md-sys-color-shadow) r g b / 0.3),
+    0px 4px 8px 3px rgb(from var(--md-sys-color-shadow) r g b / 0.15);
+  --md-sys-elevation-level4:
+    0px 2px 3px 0px rgb(from var(--md-sys-color-shadow) r g b / 0.3),
+    0px 6px 10px 4px rgb(from var(--md-sys-color-shadow) r g b / 0.15);
+  --md-sys-elevation-level5:
+    0px 4px 4px 0px rgb(from var(--md-sys-color-shadow) r g b / 0.3),
+    0px 8px 12px 6px rgb(from var(--md-sys-color-shadow) r g b / 0.15);
+}
