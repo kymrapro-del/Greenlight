@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -31,11 +32,20 @@ from greenlight.agents.extract import SceneEntities, extract_draft
 from greenlight.agents.gemini import GeminiClient
 from greenlight.agents.replace import suggest_replacements
 from greenlight.agents.research import ResearchRun, research
-from greenlight.ingest.fountain import parse_file
+from greenlight.ingest.fountain import parse_file, parse_fountain
 from greenlight.models import Draft, Entity, Finding, Verdict
 from greenlight.tools.entity_cache import EntityCache
 from greenlight.tools.parallel_search import ParallelSearch
 from greenlight.tools.queries import build_search, choose_mode, pre_verdict
+
+# Une passe part d'un chemin sur le disque (ligne de commande) ou d'un scénario
+# déjà en mémoire (dépôt par l'interface) : les deux mènent au même `Draft`.
+#
+# `PhaseHook` est le seul moyen qu'a l'extérieur de suivre une passe pendant
+# qu'elle tourne. Le pipeline n'écrit rien sur un canal, ne connaît ni HTTP ni
+# WebSocket : il appelle une fonction. C'est l'API qui décide d'en faire un flux
+# d'événements, et les tests peuvent l'observer sans réseau.
+PhaseHook = Callable[..., None]
 
 
 @dataclass
@@ -59,15 +69,42 @@ class ExtractionRun:
         return [e for e in self.entities if pre_verdict(e) is not None]
 
 
+def as_draft(source: str | Path | Draft, draft_id: str = "draft-1") -> Draft:
+    """Ramène toute source acceptée à un `Draft`.
+
+    Une chaîne qui contient un saut de ligne est du texte de scénario ; sinon
+    c'est un chemin. Un scénario tient toujours sur plusieurs lignes et un chemin
+    n'en contient jamais, donc la distinction ne peut pas se tromper.
+    """
+    if isinstance(source, Draft):
+        return source
+    if isinstance(source, str) and "\n" in source:
+        return parse_fountain(source, draft_id=draft_id)
+    return parse_file(source, draft_id=draft_id)
+
+
 def run_extraction(
-    path: str | Path, client: GeminiClient | None = None, draft_id: str = "draft-1"
+    source: str | Path | Draft,
+    client: GeminiClient | None = None,
+    draft_id: str = "draft-1",
+    on_phase: PhaseHook | None = None,
 ) -> ExtractionRun:
-    """Phases 1 → 3 : fichier de scénario → entités canoniques."""
+    """Phases 1 → 3 : scénario → entités canoniques."""
     started = time.monotonic()
     client = client or GeminiClient()
+    notify = on_phase or (lambda *_a, **_k: None)
 
-    draft = parse_file(path, draft_id=draft_id)
+    notify("ingest", "Découpage du scénario en scènes")
+    draft = as_draft(source, draft_id=draft_id)
+
+    notify(
+        "extract",
+        f"Extraction des entités sur {len(draft.scenes)} scènes",
+        scenes=len(draft.scenes),
+    )
     scenes = extract_draft(draft, client)
+
+    notify("canonicalize", "Regroupement des orthographes d'une même entité")
     entities = canonicalize(scenes)
 
     return ExtractionRun(
@@ -113,7 +150,7 @@ class ClearanceRun:
 
 
 def run_clearance(
-    path: str | Path,
+    source: str | Path | Draft,
     client: GeminiClient | None = None,
     search: ParallelSearch | None = None,
     draft_id: str = "draft-1",
@@ -121,6 +158,7 @@ def run_clearance(
     suggest: bool = False,
     previous: ClearanceRun | None = None,
     cache: EntityCache | None = None,
+    on_phase: PhaseHook | None = None,
 ) -> ClearanceRun:
     """Passe de clearance sur un scénario.
 
@@ -131,21 +169,37 @@ def run_clearance(
     started = time.monotonic()
     client = client or GeminiClient()
     search = search or ParallelSearch()
+    notify = on_phase or (lambda *_a, **_k: None)
 
-    extraction = run_extraction(path, client, draft_id=draft_id)
+    extraction = run_extraction(source, client, draft_id=draft_id, on_phase=on_phase)
 
     if previous is not None:
         draft_diff = plan(
             previous.extraction.entities, previous.findings, extraction.entities, draft_id
         )
         targets, reused = draft_diff.to_analyze, draft_diff.reused
+        notify(
+            "diff",
+            f"{len(targets)} entités modifiées à réanalyser, {len(reused)} verdicts repris",
+            reanalyzed=len(targets),
+            reused=len(reused),
+        )
     else:
         draft_diff, targets, reused = None, extraction.entities, []
 
+    notify(
+        "research",
+        f"Recherche sur {len(targets)} entités",
+        entities=len(extraction.entities),
+        searched=len(targets),
+    )
     research_run = research(targets, search, max_workers=max_workers, cache=cache)
+
+    notify("classify", "Verdicts, sur les seules sources rapportées")
     findings = classify(research_run.results, client, draft_id=draft_id)
 
     if suggest:
+        notify("suggest", "Remplacements proposés, puis repassés par la recherche")
         findings = suggest_replacements(findings, extraction.entities, client, search)
 
     return ClearanceRun(
