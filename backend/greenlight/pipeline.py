@@ -166,7 +166,21 @@ def report(run: ExtractionRun) -> str:
     billable = [e for e in run.entities if e.id not in free_ids]
     advanced = [e for e in billable if choose_mode(e) == "advanced"]
 
-    lines = [
+    lines = []
+
+    # Un compte-rendu qui annonce « 0 entités » sans dire pourquoi ressemble à
+    # un succès vide. Quand l'extraction n'a rien produit, la cause passe
+    # devant les chiffres, pas neuf lignes plus bas.
+    failed = run.failed_scenes
+    if failed and not run.entities:
+        first = failed[0].error or "cause inconnue"
+        lines += [
+            f"⚠  Extraction en échec sur les {len(failed)} scènes — aucun résultat exploitable.",
+            f"   {first.splitlines()[0]}",
+            "",
+        ]
+
+    lines += [
         f"Scénario     : {run.draft.title or run.draft.source_path}",
         f"Scènes       : {len(run.draft.scenes)}",
         f"Entités      : {len(run.entities)} canoniques",
@@ -176,8 +190,8 @@ def report(run: ExtractionRun) -> str:
         f"Durée        : {run.elapsed_s} s",
         f"Gemini (ph.2): {run.usage}",
     ]
-    if run.failed_scenes:
-        lines.append(f"Scènes en échec : {[s.scene.number for s in run.failed_scenes]}")
+    if failed:
+        lines.append(f"Scènes en échec : {[s.scene.number for s in failed]}")
 
     lines.append("")
     lines.append("Entités :")
