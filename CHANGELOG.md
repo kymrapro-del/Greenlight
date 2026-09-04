@@ -76,6 +76,27 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `md-focus-ring` and `md-filter-chip` come from `@material/web` wherever the
   library actually has the component, and nothing is imported to pad the list.
 
+- **HTTP API** (`greenlight.api.server`) — the pipeline behind FastAPI. A
+  screenplay goes in, the eight phases run, and the progress streams back over
+  SSE phase by phase rather than arriving in one block at the end. The pipeline
+  learns nothing about HTTP: it calls a `PhaseHook`, and only the API turns that
+  into a stream. A pasted screenplay is parsed in memory and never written to
+  disk.
+- **Grounded follow-up questions** (`greenlight.agents.ask`) — `/api/ask` answers
+  from the report and nothing else: no web, no recalled facts. The entity ids the
+  model cites are filtered against the report, so a link the interface opens
+  cannot point at nothing, and a question the report cannot answer comes back
+  unanswered rather than improvised.
+- **A failed pass is a failure, not an empty report** — an analysis where every
+  scene fails now names the cause. Reporting zero entities on a screenplay full
+  of landmines is indistinguishable from success to whoever reads it.
+
+### Changed
+- **The interface calls the API.** It no longer reads a JSON report committed to
+  the repository; the two seeded reports and the generator that produced them are
+  gone. Whatever the screen shows is what the server returned, or it says the
+  server did not answer.
+
 ### Verified
 - On `samples/seventeen_minutes.fountain`, the pipeline reproduces all 15
   hand-verified verdicts in `samples/EXPECTED.md`, escalates exactly the three
@@ -84,7 +105,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   research is skipped. 141 tests, all offline: no token and no credit spent
   in CI. On the interface, the Material Web components are checked as actually
   upgraded in the browser: press state layer, focus ring on `:focus-visible`,
-  and selectable filter chips.
+  and selectable filter chips. The whole chat flow is driven end to end in a
+  browser against the real server — analysis, streamed phases, report, follow-up
+  question.
 
 
 ## [0.1.0] — 2026-09-03

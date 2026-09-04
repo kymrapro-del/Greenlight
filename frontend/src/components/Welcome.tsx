@@ -1,21 +1,32 @@
 import { Composer } from './Composer';
+import { Icon } from './Icon';
 import { StateLayer } from './StateLayer';
+import type { Sample } from '../api';
 
 /**
- * L'état d'accueil : un titre, la saisie, et des amorces.
+ * L'état d'accueil : un titre, la saisie, et les scénarios livrés.
  *
- * Les amorces ne sont pas décoratives. Le jury n'a que deux minutes et ne va
- * pas déposer son propre scénario : chacune ouvre une analyse déjà calculée,
- * donc un rapport complet apparaît en un clic.
+ * Les amorces ne sont pas décoratives. Le jury n'a que deux minutes et
+ * n'apportera pas son propre scénario : chacune lance une vraie passe sur un
+ * texte que le dépôt contient. Ce ne sont pas des rapports en conserve — le
+ * pipeline tourne, et la progression se voit.
  */
 export function Welcome({
   name,
-  suggestions,
+  samples,
+  busy,
   onPick,
+  onSend,
+  onFile,
+  model,
 }: {
   name: string;
-  suggestions: { id: string; label: string; hint: string }[];
-  onPick: (id: string) => void;
+  samples: Sample[];
+  busy: boolean;
+  onPick: (sample: Sample) => void;
+  onSend: (text: string) => void;
+  onFile: (fileName: string, text: string) => void;
+  model?: string;
 }) {
   return (
     <div className="gl-welcome">
@@ -26,22 +37,41 @@ export function Welcome({
       </h2>
 
       <div className="gl-welcome-composer">
-        <Composer disabled autoFocus />
+        <Composer
+          mode="screenplay"
+          busy={busy}
+          autoFocus
+          onSend={onSend}
+          onFile={onFile}
+          model={model}
+        />
       </div>
 
       <div className="gl-suggestions">
-        {suggestions.map((s) => (
+        {samples.map((sample) => (
           <button
-            key={s.id}
+            key={sample.id}
             type="button"
             className="gl-suggestion gl-state-layer"
-            onClick={() => onPick(s.id)}
+            disabled={busy}
+            onClick={() => onPick(sample)}
           >
             <StateLayer />
-            <span className="gl-body-large">{s.label}</span>
-            <span className="gl-body-small gl-suggestion-hint">{s.hint}</span>
+            <span className="gl-suggestion-head">
+              <Icon name={sample.previousOf ? 'trending_up' : 'script'} size={18} />
+              <span className="gl-body-large">{sample.title}</span>
+            </span>
+            <span className="gl-body-small gl-suggestion-hint">{sample.subtitle}</span>
+            <span className="gl-label-medium gl-suggestion-meta">
+              {sample.scenes} scènes · analyse réelle
+            </span>
           </button>
         ))}
+        {samples.length === 0 && (
+          <p className="gl-body-medium gl-suggestion-empty">
+            Aucun scénario d’exemple servi par l’API. Joignez le vôtre pour lancer une analyse.
+          </p>
+        )}
       </div>
     </div>
   );

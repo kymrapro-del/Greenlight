@@ -193,26 +193,39 @@ PYTHONPATH=backend .venv/bin/python -m greenlight.pipeline \
 Run it in `replay` with no fixtures and it tells you so on the first line rather
 than reporting an empty success.
 
-### The report screen
+### The product
+
+Two processes: the API runs the pipeline, the interface talks to it. Nothing is
+pre-computed and no report is committed — the screen shows what the server
+actually returned, or says the server did not answer.
 
 ```bash
+# The API
+PYTHONPATH=backend .venv/bin/python -m uvicorn greenlight.api.server:app --port 8000
+
+# The interface, in another shell
 cd frontend
 npm install
 npm run theme        # regenerate the M3 palettes from the source colour
-npm run dev
+npm run dev          # proxies /api to localhost:8000
 ```
 
-The app opens on a pre-computed report and a version switcher that demonstrates
-diff mode. Both seeded reports are committed, so this needs no backend and no
-keys. Regenerate them with:
+| Route | What it does |
+| --- | --- |
+| `GET /api/health` | whether this instance really calls Gemini and Parallel, or replays fixtures |
+| `GET /api/samples` | the screenplays shipped with the repo, with their real scene counts |
+| `POST /api/analyze` | a screenplay in, the eight phases run, **the progress streams back** phase by phase over SSE, the report is the last event |
+| `GET /api/runs/{id}` | a completed pass, so a thread survives a reload |
+| `POST /api/ask` | a follow-up question, answered from that report and nothing else |
 
-```bash
-PYTHONPATH=backend .venv/bin/python -m greenlight.api.seed \
-    frontend/public/demo-report.json --placeholder --suggest
-```
+A pasted screenplay is parsed in memory and never written to disk. Passes are
+held in a capped in-memory store: a restart empties it, and two instances share
+nothing — stated here because that is the point at which this design stops being
+enough.
 
-Seeds produced by the offline harness carry `placeholder: true`, and the screen
-says so on the page. Drop `--placeholder` once real fixtures are recorded.
+An analysis where every scene fails comes back as an error naming the cause, not
+as a report with zero entities. Those two are indistinguishable to a reader, and
+one of them is a lie about a screenplay full of landmines.
 
 ### Offline fixture harness
 
@@ -298,11 +311,13 @@ wider radius, so the report signals what is open independently of colour.
 
 ## Architecture
 
-**What runs today** — a Python library plus a static Material 3 front end:
+**What runs today** — a Python service plus a Material 3 interface that talks to it:
 
 ```
 frontend/            Material 3 conversational interface (Vite + React)
-   │  reads a seeded JSON report
+   │  POST /api/analyze, reads the SSE progress stream
+   ▼
+backend/greenlight/api/server.py   FastAPI · streams the phases, holds the runs
    ▼
 backend/greenlight/
    ingest/           Fountain → scenes                         phase 1

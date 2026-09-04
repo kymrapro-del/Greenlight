@@ -230,6 +230,15 @@ def _analysis_events(request: AnalyzeRequest) -> Iterator[str]:
                 on_phase=on_phase,
             )
             payload = to_payload(run, placeholder=not _live_mode())
+            if payload.get("degraded"):
+                # Toutes les scènes ont échoué : il n'y a pas de rapport, il y a
+                # une panne. La rendre comme un rapport vide serait affirmer
+                # qu'un scénario truffé de pièges n'en contient aucun.
+                first = payload["failedScenes"][0]["error"]
+                raise RuntimeError(
+                    f"Aucune scène n'a pu être analysée ({len(payload['failedScenes'])} sur "
+                    f"{payload['sceneCount']}). Première cause : {first}"
+                )
             stored = store.add(payload, run, text)
             result["payload"] = stored.payload
         except Exception as exc:  # remonté tel quel : une panne muette est pire

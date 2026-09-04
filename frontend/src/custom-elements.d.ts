@@ -27,6 +27,11 @@ declare module 'react' {
       'md-ripple': CustomElementProps<{ disabled?: boolean }>;
       'md-focus-ring': CustomElementProps<{ inward?: boolean }>;
       'md-chip-set': CustomElementProps;
+      'md-linear-progress': CustomElementProps<{
+        indeterminate?: boolean;
+        value?: number;
+        max?: number;
+      }>;
       'md-filter-chip': CustomElementProps<{
         label?: string;
         selected?: boolean;

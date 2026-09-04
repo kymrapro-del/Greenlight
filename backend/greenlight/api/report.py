@@ -96,6 +96,18 @@ def to_payload(run: ClearanceRun, placeholder: bool = False) -> dict[str, Any]:
         "findings": findings,
     }
 
+    # Une scène perdue ne disparaît pas en silence. Sans ça, un scénario dont
+    # toutes les scènes échouent rend « 0 entité » — exactement la même chose
+    # qu'un scénario propre, et le lecteur conclut à tort qu'il n'y a rien à
+    # signaler. Le diagnostic prime sur le chiffre.
+    failed = run.extraction.failed_scenes
+    if failed:
+        payload["failedScenes"] = [
+            {"number": scene.scene.number, "heading": scene.scene.heading, "error": scene.error}
+            for scene in failed
+        ]
+        payload["degraded"] = len(failed) == len(run.extraction.draft.scenes)
+
     if run.diff is not None:
         payload["diff"] = {
             "summary": run.diff.summary(),

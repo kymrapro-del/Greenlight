@@ -67,8 +67,7 @@ body {
   border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-  --gl-state-color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
 }
 
 .gl-icon-button:disabled {
@@ -446,7 +445,7 @@ body {
 
 .gl-composer-field {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
   max-width: 860px;
   margin: 0 auto;
@@ -455,14 +454,21 @@ body {
   background: var(--md-sys-color-surface-container-high);
 }
 
+/* Un `textarea` qui grandit avec ce qu'on y colle : un scénario entier tient
+   dans ce champ, et une ligne unique qui défile le rendrait illisible. */
 .gl-composer-input {
   flex: 1;
   min-width: 0;
+  max-height: 40vh;
   padding: 10px 6px;
   border: none;
   background: transparent;
   color: var(--md-sys-color-on-surface);
   font: inherit;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+  field-sizing: content;
 }
 
 .gl-composer-input:focus {
@@ -918,4 +924,82 @@ body {
   .gl-bubble {
     max-width: 88%;
   }
+}
+
+/* --- Une passe en cours ------------------------------------------------- */
+
+.gl-run {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+
+.gl-run-bar {
+  width: 100%;
+  --md-linear-progress-active-indicator-color: var(--md-sys-color-primary);
+  --md-linear-progress-track-color: var(--md-sys-color-surface-container-highest);
+  --md-linear-progress-track-shape: var(--md-sys-shape-corner-full);
+  --md-linear-progress-active-indicator-height: 4px;
+  --md-linear-progress-track-height: 4px;
+}
+
+.gl-run-phases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gl-run-phases li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* La phase en cours est la seule à porter la couleur pleine : le regard sait
+   où en est la passe sans lire toute la liste. */
+.gl-run-phases li.is-current {
+  color: var(--md-sys-color-on-surface);
+}
+
+.gl-run-phases li.is-done .gl-icon {
+  color: var(--md-sys-color-primary);
+}
+
+.gl-run-wait {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* --- API injoignable ----------------------------------------------------- */
+
+.gl-offline {
+  max-width: 860px;
+  margin: 16px auto 0;
+  border-left-color: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* --- Amorces ------------------------------------------------------------- */
+
+.gl-suggestion-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gl-suggestion-meta {
+  color: var(--md-sys-color-primary);
+}
+
+.gl-suggestion:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gl-suggestion-empty {
+  color: var(--md-sys-color-on-surface-variant);
 }

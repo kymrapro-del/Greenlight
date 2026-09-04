@@ -58,6 +58,8 @@ export interface ReportStats {
 }
 
 export interface Report {
+  /** Identifiant de la passe côté serveur : ancre les questions et le diff. */
+  runId: string;
   /** Vrai tant que le rapport n'a pas été produit par un vrai passage. */
   placeholder: boolean;
   title: string;

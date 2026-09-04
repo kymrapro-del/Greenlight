@@ -1,148 +1,329 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import {
+  analyze,
+  askAboutRun,
+  getHealth,
+  getSamples,
+  type Health,
+  type PhaseEvent,
+  type Sample,
+} from './api';
 import { Composer } from './components/Composer';
 import { DiffStrip } from './components/DiffStrip';
 import { Icon } from './components/Icon';
 import { AssistantMessage, ResponseActions, UserMessage } from './components/Message';
 import { NavDrawer, type Thread } from './components/NavDrawer';
 import { ReportCard } from './components/ReportCard';
+import { RunProgress } from './components/RunProgress';
 import { Welcome } from './components/Welcome';
 import type { Report } from './types';
 
 /**
- * GREENLIGHT — interface conversationnelle.
+ * GREENLIGHT — l'interface conversationnelle.
  *
- * Deux états, comme un assistant : l'accueil, avec le titre et la saisie
- * centrés, et la conversation une fois qu'une analyse est ouverte.
+ * Deux états, comme un assistant : l'accueil, titre et saisie centrés, puis la
+ * conversation. Rien n'est pré-calculé — un scénario part vers l'API, les huit
+ * phases tournent, la progression remonte pendant qu'elles tournent, et le
+ * rapport s'affiche **dans** la réponse. C'est ainsi qu'un assistant rend un
+ * résultat structuré, et les verdicts gardent leurs affordances de lecture sans
+ * quitter le fil.
  *
- * Le rapport de clearance est rendu **dans** la réponse plutôt que sur un autre
- * écran : c'est ainsi qu'un assistant rend un résultat structuré, et les
- * verdicts gardent leurs affordances de lecture sans quitter le fil.
- *
- * L'application ouvre directement sur une analyse. Le battle plan est
- * explicite : personne n'arrive sur un écran vide et n'attend un calcul.
+ * Le fil garde son `runId` : une question de suivi s'y ancre, et une réécriture
+ * s'y compare pour ne réanalyser que ce que le scénariste a réellement touché.
  */
-const THREADS: Thread[] = [
-  { id: 'v1', title: 'Seventeen Minutes — pré-clearance v1' },
-  { id: 'v2', title: 'Seventeen Minutes — réécriture v2' },
-];
 
-const SUGGESTIONS = [
-  {
-    id: 'v1',
-    label: 'Analyser un scénario de 12 pages',
-    hint: '15 entités · 10 à traiter avant le tournage',
-  },
-  {
-    id: 'v2',
-    label: 'Comparer deux versions',
-    hint: '5 entités réanalysées sur 16 · 68 % de recherche évitée',
-  },
-];
+type Turn =
+  | { kind: 'user'; id: string; text: string }
+  | {
+      kind: 'analysis';
+      id: string;
+      status: 'running' | 'done' | 'error';
+      scenes?: number;
+      phases: PhaseEvent[];
+      report?: Report;
+      error?: string;
+    }
+  | {
+      kind: 'answer';
+      id: string;
+      status: 'running' | 'done' | 'error';
+      text?: string;
+      entityIds?: string[];
+      error?: string;
+    };
 
-const FILES: Record<string, string> = {
-  v1: 'demo-report.json',
-  v2: 'demo-report-v2.json',
-};
+interface Conversation {
+  id: string;
+  title: string;
+  turns: Turn[];
+  /** La dernière passe du fil : ce sur quoi portent les questions et le diff. */
+  runId?: string;
+  /** L'identifiant du scénario livré, quand le fil vient d'une amorce. */
+  sampleId?: string;
+}
+
+const newId = () => Math.random().toString(36).slice(2, 10);
+
+/**
+ * Le titre du fil pour un scénario déposé : la page de titre Fountain quand
+ * elle existe, sinon la première scène. Les capitales de la page de titre sont
+ * ramenées à une casse de phrase — le volet ne crie pas.
+ */
+function title(text: string): string {
+  const titled = /^\s*Title:\s*(.+)$/im.exec(text)?.[1]?.trim();
+  const heading = /^\s*(INT\.|EXT\.)\s*(.+)$/im.exec(text)?.[2]?.trim();
+  const raw = titled || heading || 'Scénario sans titre';
+  return raw === raw.toUpperCase()
+    ? raw.charAt(0) + raw.slice(1).toLowerCase()
+    : raw;
+}
 
 export default function App() {
-  const [threadId, setThreadId] = useState<string | null>('v1');
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [report, setReport] = useState<Report | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [reachable, setReachable] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const bottom = useRef<HTMLDivElement>(null);
+
+  const active = conversations.find((c) => c.id === activeId) ?? null;
 
   useEffect(() => {
-    if (!threadId) return;
-    let cancelled = false;
-    setReport(null);
-    setError(null);
+    Promise.all([getHealth(), getSamples()])
+      .then(([h, s]) => {
+        setHealth(h);
+        setSamples(s);
+        setReachable(true);
+      })
+      .catch(() => setReachable(false));
+  }, []);
 
-    fetch(FILES[threadId])
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data: Report) => !cancelled && setReport(data))
-      .catch((e: Error) => !cancelled && setError(e.message));
+  // La conversation suit le dernier tour, comme dans n'importe quel fil.
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [conversations, activeId]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [threadId]);
+  const patch = useCallback((conversationId: string, change: Partial<Conversation>) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, ...change } : c)),
+    );
+  }, []);
 
-  const isRewrite = threadId === 'v2';
+  const patchTurn = useCallback((conversationId: string, turnId: string, change: object) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id !== conversationId
+          ? c
+          : {
+              ...c,
+              turns: c.turns.map((t) => (t.id === turnId ? ({ ...t, ...change } as Turn) : t)),
+            },
+      ),
+    );
+  }, []);
+
+  const append = useCallback((conversationId: string, ...turns: Turn[]) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, turns: [...c.turns, ...turns] } : c)),
+    );
+  }, []);
+
+  /** Lance une passe et raccroche chaque événement au tour qui l'attend. */
+  const runAnalysis = useCallback(
+    async (
+      conversationId: string,
+      request: { text?: string; sampleId?: string; previousRunId?: string },
+      prompt: string,
+    ) => {
+      const analysisId = newId();
+      append(
+        conversationId,
+        { kind: 'user', id: newId(), text: prompt },
+        { kind: 'analysis', id: analysisId, status: 'running', phases: [] },
+      );
+      setBusy(true);
+
+      try {
+        const report = await analyze(request, {
+          onStarted: ({ scenes }) => patchTurn(conversationId, analysisId, { scenes }),
+          onPhase: (phase) =>
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id !== conversationId
+                  ? c
+                  : {
+                      ...c,
+                      turns: c.turns.map((t) =>
+                        t.id === analysisId && t.kind === 'analysis'
+                          ? { ...t, phases: [...t.phases, phase] }
+                          : t,
+                      ),
+                    },
+              ),
+            ),
+        });
+        patchTurn(conversationId, analysisId, { status: 'done', report });
+        // Le titre du fil vient de l'amorce quand il y en a une : celui du
+        // scénario est écrit en capitales sur sa page de titre, et le volet
+        // n'a aucune raison de crier.
+        patch(conversationId, { runId: report.runId });
+        return report;
+      } catch (error) {
+        patchTurn(conversationId, analysisId, {
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [append, patch, patchTurn],
+  );
+
+  const startConversation = useCallback((title: string, sampleId?: string) => {
+    const conversation: Conversation = { id: newId(), title, turns: [], sampleId };
+    setConversations((prev) => [conversation, ...prev]);
+    setActiveId(conversation.id);
+    return conversation.id;
+  }, []);
+
+  /**
+   * Une amorce lance une vraie passe. Pour la réécriture, la version 1 part
+   * d'abord : le diff n'a de sens qu'avec une version précédente, et le montrer
+   * en deux tours est exactement la démonstration qu'il faut faire.
+   */
+  const pickSample = useCallback(
+    async (sample: Sample) => {
+      const conversationId = startConversation(sample.title, sample.id);
+
+      if (sample.previousOf) {
+        const first = await runAnalysis(
+          conversationId,
+          { sampleId: sample.previousOf },
+          'Analyse la première version avant qu’on la verrouille.',
+        );
+        if (!first?.runId) return;
+        await runAnalysis(
+          conversationId,
+          { sampleId: sample.id, previousRunId: first.runId },
+          'Voici la réécriture. Qu’est-ce qui change côté clearance ?',
+        );
+        return;
+      }
+
+      await runAnalysis(
+        conversationId,
+        { sampleId: sample.id },
+        `Analyse ce scénario avant qu’on le verrouille : ${sample.title}.`,
+      );
+    },
+    [runAnalysis, startConversation],
+  );
+
+  const submitScreenplay = useCallback(
+    async (text: string, label: string) => {
+      const conversationId =
+        active?.runId || activeId === null ? startConversation(title(text)) : activeId;
+      await runAnalysis(conversationId, { text }, label);
+    },
+    [active, activeId, runAnalysis, startConversation],
+  );
+
+  const submitQuestion = useCallback(
+    async (question: string) => {
+      if (!active?.runId) return;
+      const answerId = newId();
+      append(
+        active.id,
+        { kind: 'user', id: newId(), text: question },
+        { kind: 'answer', id: answerId, status: 'running' },
+      );
+      setBusy(true);
+      try {
+        const answer = await askAboutRun(active.runId, question);
+        patchTurn(active.id, answerId, {
+          status: 'done',
+          text: answer.answerable
+            ? answer.answer
+            : `${answer.answer}\n\nCette question sort de ce que le rapport contient.`,
+          entityIds: answer.entityIds,
+        });
+      } catch (error) {
+        patchTurn(active.id, answerId, {
+          status: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [active, append, patchTurn],
+  );
+
+  const send = (text: string) => {
+    if (active?.runId) return submitQuestion(text);
+    return submitScreenplay(text, 'Analyse ce scénario avant qu’on le verrouille.');
+  };
+
+  const receiveFile = (fileName: string, text: string) =>
+    submitScreenplay(text, `Analyse ${fileName} avant qu’on le verrouille.`);
+
+  const threads: Thread[] = conversations.map((c) => ({ id: c.id, title: c.title }));
+  const model = health?.models.classify;
 
   return (
     <div className="gl-shell">
       <NavDrawer
-        threads={THREADS}
-        activeId={threadId}
+        threads={threads}
+        activeId={activeId}
         open={drawerOpen}
-        onSelect={setThreadId}
-        onNew={() => setThreadId(null)}
+        onSelect={setActiveId}
+        onNew={() => setActiveId(null)}
         onToggle={() => setDrawerOpen((v) => !v)}
       />
 
       <div className="gl-main">
-        {threadId === null ? (
-          <Welcome name="Kymra" suggestions={SUGGESTIONS} onPick={setThreadId} />
+        {reachable === false && (
+          <p className="gl-body-small gl-banner gl-offline" role="alert">
+            <Icon name="cancel" size={16} />
+            L’API GREENLIGHT n’est pas joignable. L’interface ne montre pas de rapport en conserve
+            à la place : il n’y a rien à analyser tant que le serveur ne répond pas.
+          </p>
+        )}
+
+        {active === null ? (
+          <Welcome
+            name="Kymra"
+            samples={samples}
+            busy={busy}
+            onPick={pickSample}
+            onSend={send}
+            onFile={receiveFile}
+            model={model}
+          />
         ) : (
           <>
             <main className="gl-conversation">
               <div className="gl-conversation-column">
-                <UserMessage>
-                  {isRewrite
-                    ? 'Voici la version 2 de Seventeen Minutes. Qu’est-ce qui change côté clearance ?'
-                    : 'Analyse ce scénario avant qu’on le verrouille : Seventeen Minutes, 12 pages.'}
-                </UserMessage>
-
-                {error ? (
-                  <AssistantMessage>
-                    <p className="gl-body-large">Rapport indisponible : {error}</p>
-                  </AssistantMessage>
-                ) : !report ? (
-                  <AssistantMessage pending />
-                ) : (
-                  <AssistantMessage>
-                    <p className="gl-body-large gl-lede">
-                      {isRewrite ? (
-                        <>
-                          La réécriture change {report.diff?.reanalyzed ?? 0} entités sur{' '}
-                          {report.stats.entities}. J’ai repris les {report.diff?.reused ?? 0} autres
-                          verdicts sans les recalculer, et il reste{' '}
-                          <strong>{report.stats.flagged} points à traiter</strong> avant le
-                          tournage.
-                        </>
-                      ) : (
-                        <>
-                          J’ai relevé <strong>{report.stats.entities} entités nommées</strong> dans
-                          les {report.sceneCount} scènes. {report.stats.flagged} demandent une
-                          action avant le tournage, dont {report.stats.escalated} dont le verdict
-                          est monté d’un cran parce que la scène les met en cause.
-                        </>
-                      )}
-                    </p>
-
-                    {report.placeholder && (
-                      <p className="gl-body-small gl-banner">
-                        <Icon name="science" size={16} />
-                        Données de démonstration : ce rapport vient du harnais de test hors ligne.
-                        Les verdicts et les sources seront ceux d’un vrai passage une fois les
-                        fixtures enregistrées.
-                      </p>
-                    )}
-
-                    {report.diff && <DiffStrip diff={report.diff} />}
-
-                    <ReportCard report={report} />
-
-                    <ResponseActions
-                      note={`${report.stats.resolvedByRule} entités tranchées par règle, sans recherche facturée.`}
-                    />
-                  </AssistantMessage>
-                )}
+                {active.turns.map((turn) => (
+                  <TurnView key={turn.id} turn={turn} live={health?.live ?? false} />
+                ))}
+                <div ref={bottom} />
               </div>
             </main>
 
             <div className="gl-composer">
-              <Composer disabled />
+              <Composer
+                mode={active.runId ? 'question' : 'screenplay'}
+                busy={busy}
+                onSend={send}
+                onFile={receiveFile}
+                model={model}
+              />
               <p className="gl-body-small gl-composer-note">
                 GREENLIGHT ne remplace pas le rapport de clearance exigé par l’assureur E&amp;O.
               </p>
@@ -151,5 +332,86 @@ export default function App() {
         )}
       </div>
     </div>
+  );
+}
+
+function TurnView({ turn, live }: { turn: Turn; live: boolean }) {
+  if (turn.kind === 'user') return <UserMessage>{turn.text}</UserMessage>;
+
+  if (turn.kind === 'answer') {
+    if (turn.status === 'running') return <AssistantMessage pending />;
+    return (
+      <AssistantMessage>
+        {turn.status === 'error' ? (
+          <p className="gl-body-large">Réponse indisponible : {turn.error}</p>
+        ) : (
+          <>
+            {turn.text?.split('\n\n').map((paragraph, i) => (
+              <p key={i} className="gl-body-large">
+                {paragraph}
+              </p>
+            ))}
+            <ResponseActions />
+          </>
+        )}
+      </AssistantMessage>
+    );
+  }
+
+  if (turn.status === 'running') {
+    return (
+      <AssistantMessage>
+        <RunProgress phases={turn.phases} scenes={turn.scenes} />
+      </AssistantMessage>
+    );
+  }
+
+  if (turn.status === 'error' || !turn.report) {
+    return (
+      <AssistantMessage>
+        <p className="gl-body-large">L’analyse a échoué : {turn.error}</p>
+      </AssistantMessage>
+    );
+  }
+
+  const report = turn.report;
+  const isRewrite = Boolean(report.diff);
+
+  return (
+    <AssistantMessage>
+      <p className="gl-body-large gl-lede">
+        {isRewrite ? (
+          <>
+            La réécriture change {report.diff?.reanalyzed ?? 0} entités sur {report.stats.entities}.
+            J’ai repris les {report.diff?.reused ?? 0} autres verdicts sans les recalculer, et il
+            reste <strong>{report.stats.flagged} points à traiter</strong> avant le tournage.
+          </>
+        ) : (
+          <>
+            J’ai relevé <strong>{report.stats.entities} entités nommées</strong> dans les{' '}
+            {report.sceneCount} scènes. {report.stats.flagged} demandent une action avant le
+            tournage, dont {report.stats.escalated} dont le verdict est monté d’un cran parce que
+            la scène les met en cause.
+          </>
+        )}
+      </p>
+
+      {report.placeholder && (
+        <p className="gl-body-small gl-banner">
+          <Icon name="science" size={16} />
+          {live
+            ? 'Passe réelle, mais le serveur la signale comme non validée.'
+            : 'Le serveur rejoue des recherches enregistrées plutôt que d’appeler les API : les phases sont réelles, les sources viennent du disque.'}
+        </p>
+      )}
+
+      {report.diff && <DiffStrip diff={report.diff} />}
+
+      <ReportCard report={report} />
+
+      <ResponseActions
+        note={`${report.stats.resolvedByRule} entités tranchées par règle, sans recherche facturée · ${report.stats.elapsedS} s`}
+      />
+    </AssistantMessage>
   );
 }
