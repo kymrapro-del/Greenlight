@@ -46,6 +46,25 @@ from greenlight.tools.parallel_search import ParallelSearch
 
 SAMPLES_DIR = REPO_ROOT / "samples"
 
+# --------------------------------------------------------------------------
+# Garde-fous
+# --------------------------------------------------------------------------
+#
+# Cette API est destinée à être servie publiquement, sans authentification, et
+# chaque scène coûte un appel de modèle. Sans plafond, un corps de requête de
+# quelques mégaoctets se traduit en milliers d'appels facturés : ce n'est pas
+# un déni de service, c'est une facture. Les deux limites ci-dessous sont
+# volontairement basses — un long métrage fait 120 pages, pas 2 000.
+#
+# Ce ne sont pas des limites de sécurité complètes. Une instance publique
+# demande aussi une limitation par client, qui appartient à l'infrastructure
+# (Cloud Run + un quota) et pas à ce fichier. C'est écrit ici plutôt que
+# supposé.
+
+MAX_SCREENPLAY_CHARS = 600_000  # ~200 pages de scénario
+MAX_SCENES = 400
+MAX_CONCURRENT_ANALYSES = 4
+
 # Les scénarios livrés avec le produit. Le jury ne déposera pas le sien : il
 # clique, et une vraie passe part sur un texte que le dépôt contient.
 SAMPLES = [
@@ -63,6 +82,13 @@ SAMPLES = [
         "previousOf": "seventeen-minutes",
     },
 ]
+
+# Le pipeline parallélise déjà ses propres appels sur huit threads. Quatre
+# passes simultanées en font trente-deux : au-delà, l'instance ne va pas plus
+# vite, elle ralentit tout le monde et sature le quota Parallel. Refuser une
+# cinquième passe tout de suite vaut mieux que les servir toutes mal.
+_analysis_slots = threading.Semaphore(MAX_CONCURRENT_ANALYSES)
+
 
 app = FastAPI(
     title="GREENLIGHT",
@@ -218,6 +244,31 @@ def _analysis_events(request: AnalyzeRequest) -> Iterator[str]:
         yield _event("error", {"message": "Aucun scénario fourni."})
         return
 
+    if len(text) > MAX_SCREENPLAY_CHARS:
+        yield _event(
+            "error",
+            {
+                "message": (
+                    f"Scénario trop long : {len(text):,} caractères pour un maximum de "
+                    f"{MAX_SCREENPLAY_CHARS:,}. Un long métrage en fait environ 200 000."
+                ).replace(",", " ")
+            },
+        )
+        return
+
+    draft = as_draft(text, draft_id=request.sample_id or "draft")
+    if len(draft.scenes) > MAX_SCENES:
+        yield _event(
+            "error",
+            {
+                "message": (
+                    f"{len(draft.scenes)} scènes pour un maximum de {MAX_SCENES}. "
+                    "Chaque scène coûte un appel de modèle."
+                )
+            },
+        )
+        return
+
     previous = None
     if request.previous_run_id:
         stored = store.get(request.previous_run_id)
@@ -228,6 +279,18 @@ def _analysis_events(request: AnalyzeRequest) -> Iterator[str]:
             )
             return
         previous = stored.run
+
+    if not _analysis_slots.acquire(blocking=False):
+        yield _event(
+            "error",
+            {
+                "message": (
+                    f"{MAX_CONCURRENT_ANALYSES} analyses tournent déjà sur cette instance. "
+                    "Réessayez dans un instant."
+                )
+            },
+        )
+        return
 
     events: queue.Queue[Any] = queue.Queue()
     result: dict[str, Any] = {}
@@ -240,7 +303,7 @@ def _analysis_events(request: AnalyzeRequest) -> Iterator[str]:
     def work() -> None:
         try:
             run = run_clearance(
-                text,
+                draft,
                 client=client,
                 search=search,
                 draft_id=request.sample_id or "draft",
@@ -263,12 +326,16 @@ def _analysis_events(request: AnalyzeRequest) -> Iterator[str]:
         except Exception as exc:  # remonté tel quel : une panne muette est pire
             result["error"] = f"{type(exc).__name__}: {exc}"
         finally:
+            # Rendre le jeton dans le `finally` du thread, pas du générateur :
+            # un client qui ferme sa connexion arrête la lecture du flux, et un
+            # jeton libéré côté générateur ne le serait jamais.
+            _analysis_slots.release()
             events.put(_SENTINEL)
 
     worker = threading.Thread(target=work, daemon=True)
     worker.start()
 
-    yield _event("started", {"scenes": len(as_draft(text).scenes)})
+    yield _event("started", {"scenes": len(draft.scenes)})
 
     while True:
         item = events.get()

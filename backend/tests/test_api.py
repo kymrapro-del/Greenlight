@@ -179,3 +179,50 @@ def test_a_screenplay_pasted_as_text_runs_like_an_uploaded_file(client, sample_s
     events = _stream(client, {"text": sample_script.read_text(encoding="utf-8")})
     report = events[-1][1]
     assert report["stats"]["entities"] == 26
+
+
+# --------------------------------------------------------------------------
+# Garde-fous
+# --------------------------------------------------------------------------
+
+
+def test_an_oversized_screenplay_is_refused_before_a_single_model_call(client):
+    """Chaque scène coûte un appel. Un corps énorme est une facture, pas un DoS.
+
+    Le refus doit arriver AVANT le parsing et le fan-out : c'est là que le coût
+    serait engagé, et un plafond appliqué après ne protège de rien.
+    """
+    huge = "INT. ROOM - DAY\n\nA man waits.\n\n" * 40_000
+    assert len(huge) > server.MAX_SCREENPLAY_CHARS
+    events = _stream(client, {"text": huge})
+    assert events[-1][0] == "error"
+    assert "trop long" in events[-1][1]["message"]
+    # Aucune phase n'a démarré : rien n'a été parsé, rien n'a été appelé.
+    assert not [name for name, _ in events if name == "phase"]
+
+
+def test_too_many_scenes_is_refused_even_when_the_text_is_short(client, monkeypatch):
+    """Un scénario court peut porter des milliers de scènes minuscules."""
+    monkeypatch.setattr(server, "MAX_SCENES", 5)
+    many = "".join(f"INT. ROOM {i} - DAY\n\nHe waits.\n\n" for i in range(20))
+    events = _stream(client, {"text": many})
+    assert events[-1][0] == "error"
+    assert "scènes" in events[-1][1]["message"]
+
+
+def test_the_instance_refuses_a_passe_beyond_its_concurrency_budget(client, monkeypatch):
+    """Refuser tout de suite vaut mieux que servir toutes les passes mal."""
+    import threading
+
+    monkeypatch.setattr(server, "_analysis_slots", threading.Semaphore(0))
+    events = _stream(client, {"sampleId": "seventeen-minutes"})
+    assert events[-1][0] == "error"
+    assert "tournent déjà" in events[-1][1]["message"]
+
+
+def test_the_concurrency_slot_is_returned_after_a_failed_pass(client):
+    """Un jeton perdu bloque l'instance pour de bon, silencieusement."""
+    before = server._analysis_slots._value
+    _stream(client, {"text": "   "})  # refusée avant même de prendre un jeton
+    _stream(client, {"sampleId": "seventeen-minutes"})  # passe complète
+    assert server._analysis_slots._value == before

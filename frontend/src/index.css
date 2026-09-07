@@ -1080,6 +1080,18 @@ body {
   }
 }
 
+/* Une source dont le schéma n'est pas ouvrable : montrée, pas cliquable. */
+.gl-citation-unsafe {
+  color: var(--md-sys-color-on-surface-variant);
+  text-decoration: line-through;
+  text-decoration-color: var(--md-sys-color-outline);
+}
+
+.gl-citation-unsafe .gl-label-small {
+  color: var(--md-sys-color-error);
+  text-decoration: none;
+}
+
 /* --- Une passe en cours ------------------------------------------------- */
 
 .gl-run {

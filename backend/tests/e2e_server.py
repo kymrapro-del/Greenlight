@@ -19,17 +19,56 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any
 
 os.environ.setdefault("FIXTURE_MODE", "replay")
 
-from greenlight.agents.gemini import GeminiClient  # noqa: E402
-from greenlight.api import server  # noqa: E402
-from tests.test_pipeline import ScriptedSearch, _dual_transport  # noqa: E402
+from greenlight.agents.gemini import GeminiClient
+from greenlight.api import server
+from greenlight.tools.parallel_search import SearchResponse, SearchResult
+from tests.test_pipeline import ScriptedSearch, _dual_transport
+
+
+class HostileSearch(ScriptedSearch):
+    """Rend une source dont le schéma d'URL est dangereux.
+
+    Les URL du rapport viennent du web ouvert. Un `javascript:` posé dans un
+    `href` est du code exécuté au clic, dans l'origine de l'application, et le
+    pipeline ne vérifie que la *présence* d'une URL dans les résultats — pas son
+    schéma. Le filtre vit donc côté interface, et un test qui n'exerce que des
+    URL saines n'en prouve rien.
+    """
+
+    HOSTILE_URL = "javascript:alert(document.domain)"
+
+    def search(self, objective, search_queries, mode=None):  # type: ignore[override]
+        response = super().search(objective, search_queries, mode=mode)
+        return SearchResponse(
+            search_id=response.search_id,
+            results=[
+                *response.results,
+                SearchResult(
+                    url=self.HOSTILE_URL,
+                    title="Source au schéma dangereux",
+                    excerpts=["Une source que la recherche a rapportée telle quelle."],
+                ),
+            ],
+            mode=response.mode,
+        )
+
+
+# Un appel de modèle réel prend des centaines de millisecondes. Un double qui
+# répond en zéro fait tenir la passe entière en 20 ms, et l'interface n'a alors
+# jamais l'occasion de peindre sa progression — ce qui ferait échouer un test
+# sur une promesse que le produit tient pourtant. Ce délai rapproche le double
+# du vrai plutôt que d'assouplir l'assertion.
+_CALL_LATENCY_S = 0.25
 
 
 def _transport(request: dict[str, Any]) -> dict[str, Any]:
     """Les transports des tests de pipeline, plus la phase de conversation."""
+    time.sleep(_CALL_LATENCY_S)
     if request["schema"] == "Answer":
         # La réponse s'appuie sur la première entité que le contexte contient
         # réellement : le lien que l'interface ouvre doit pointer quelque part.
@@ -52,13 +91,26 @@ def _transport(request: dict[str, Any]) -> dict[str, Any]:
             "usage": {"prompt_tokens": 200, "output_tokens": 20},
         }
 
+    if request["schema"] == "Classification":
+        body = json.loads(_dual_transport(request)["json"])
+        # Le modèle cite ce que la recherche lui a rapporté, schéma compris.
+        # Le pipeline vérifie qu'une URL citée figure bien dans les résultats ;
+        # celle-ci y figure. C'est précisément le cas que le filtre côté
+        # interface doit attraper, et il faut donc qu'il arrive jusqu'à elle.
+        if HostileSearch.HOSTILE_URL in request["prompt"] and body.get("cited_urls"):
+            body["cited_urls"] = [*body["cited_urls"], HostileSearch.HOSTILE_URL]
+        return {
+            "json": json.dumps(body),
+            "usage": {"prompt_tokens": 900, "output_tokens": 140},
+        }
+
     return _dual_transport(request)
 
 
-def build_clients() -> tuple[GeminiClient, ScriptedSearch]:
+def build_clients() -> tuple[GeminiClient, HostileSearch]:
     client = GeminiClient(transport=_transport)
     client._fixtures.mode = "live"  # le faux transport remplace le réseau
-    return client, ScriptedSearch()
+    return client, HostileSearch()
 
 
 server.build_clients = build_clients

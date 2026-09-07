@@ -1,8 +1,9 @@
 import { useState } from 'react';
 
 import type { TextFieldElement } from '../custom-elements';
+import { safeHref } from '../safe-url';
 import { VERDICTS, VERDICT_STYLES, type Verdict } from '../theme/verdicts';
-import { TIER_LABELS, TYPE_LABELS, type Finding, type Report } from '../types';
+import { TIER_LABELS, TYPE_LABELS, type Citation as CitationData, type Finding, type Report } from '../types';
 import { Icon } from './Icon';
 import { StateLayer } from './StateLayer';
 import { VerdictChip } from './VerdictChip';
@@ -242,15 +243,7 @@ function FindingRow({
                 <ul className="gl-citations">
                   {finding.citations.map((citation) => (
                     <li key={citation.url}>
-                      <a
-                        className="gl-body-medium gl-citation-link"
-                        href={citation.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                      >
-                        {citation.title || citation.url}
-                        <Icon name="open_in_new" size={15} />
-                      </a>
+                      <Citation citation={citation} />
                     </li>
                   ))}
                 </ul>
@@ -279,5 +272,33 @@ function FindingRow({
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * Une source, cliquable seulement si son schéma le permet.
+ *
+ * Une URL refusée n'est pas cachée : elle s'affiche en texte. Le lecteur voit
+ * ce que la recherche a rapporté et peut juger, ce qu'un lien silencieusement
+ * disparu ne permettrait pas.
+ */
+function Citation({ citation }: { citation: CitationData }) {
+  const href = safeHref(citation.url);
+  const label = citation.title || citation.url;
+
+  if (!href) {
+    return (
+      <span className="gl-body-medium gl-citation-unsafe" title={citation.url}>
+        {label}
+        <span className="gl-label-small"> — lien non ouvrable</span>
+      </span>
+    );
+  }
+
+  return (
+    <a className="gl-body-medium gl-citation-link" href={href} target="_blank" rel="noreferrer noopener">
+      {label}
+      <Icon name="open_in_new" size={15} />
+    </a>
   );
 }

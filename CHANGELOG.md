@@ -91,6 +91,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   scene fails now names the cause. Reporting zero entities on a screenplay full
   of landmines is indistinguishable from success to whoever reads it.
 
+### Security
+- **Source URLs are whitelisted before they become links.** Citations come from
+  the open web, and React does not escape an `href`; a `javascript:` URL there
+  is a one-click injection in the application's own origin. Only `http` and
+  `https` are rendered as links, normalised through `URL` so that case, spacing
+  and encoding tricks cannot slip past. A refused URL is displayed as text
+  rather than dropped — the reader still sees what search returned.
+- **The analyse endpoint is bounded.** An oversized body is refused before
+  parsing, an over-long screenplay before the fan-out, and a fifth simultaneous
+  pass outright. Each scene costs a model call, so an unbounded request is a
+  bill rather than a denial of service. Per-client rate limiting is explicitly
+  left to the infrastructure, and said so.
+
 ### Changed
 - **The interface calls the API.** It no longer reads a JSON report committed to
   the repository; the two seeded reports and the generator that produced them are

@@ -173,3 +173,26 @@ test('le thème bascule et se souvient', async ({ page }, testInfo) => {
   await toggle.click();
   await expect(root).not.toHaveAttribute('data-theme', /.*/);
 });
+
+test('une URL de source au schéma dangereux ne devient jamais cliquable', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.gl-suggestion').first().click();
+  await expect(page.locator('.gl-report')).toBeVisible({ timeout: 120_000 });
+  await page.locator('.gl-finding.is-open').scrollIntoViewIfNeeded();
+
+  // Le serveur de test rapporte délibérément une source en `javascript:`,
+  // et le pipeline la laisse passer : il vérifie qu'une URL citée figure bien
+  // dans les résultats, pas son schéma. Le filtre est côté interface, et sans
+  // cette source hostile ce test ne prouverait rien.
+  await expect(page.locator('.gl-citation-unsafe').first()).toBeVisible();
+  await expect(page.locator('.gl-citation-unsafe').first()).toContainText('non ouvrable');
+
+  // Et aucun lien du rapport ne porte autre chose que http(s).
+  const schemes = await page.evaluate(() =>
+    [...document.querySelectorAll('.gl-report a[href]')].map(
+      (a) => new URL((a as HTMLAnchorElement).href).protocol,
+    ),
+  );
+  expect(schemes.filter((p) => p !== 'http:' && p !== 'https:')).toEqual([]);
+  expect(schemes.length).toBeGreaterThan(0); // il y a bien des liens légitimes
+});

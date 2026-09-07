@@ -305,6 +305,20 @@ held in a capped in-memory store: a restart empties it, and two instances share
 nothing — stated here because that is the point at which this design stops being
 enough.
 
+**Guards, because every scene costs a model call.** A body over 600 000
+characters is refused before parsing, a screenplay over 400 scenes before the
+fan-out, and a fifth simultaneous analysis is refused outright rather than
+served badly. Without them, a few megabytes of request body is not a denial of
+service — it is a bill. Per-client rate limiting is *not* here: it belongs to
+the infrastructure in front of the service, and a public instance needs it.
+
+**Source URLs are whitelisted to `http`/`https` before rendering.** Citations
+come from search results, so from the open web, and React does not escape an
+`href`: a `javascript:` URL there is code executed on click, in the app's own
+origin. The pipeline already checks that a cited URL appears in the results —
+that proves the source exists, not that its scheme is safe. A refused URL is
+shown as plain text rather than hidden, so the reader can still judge it.
+
 An analysis where every scene fails comes back as an error naming the cause, not
 as a report with zero entities. Those two are indistinguishable to a reader, and
 one of them is a lie about a screenplay full of landmines.
