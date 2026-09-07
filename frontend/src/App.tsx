@@ -18,6 +18,8 @@ import { ReportCard } from './components/ReportCard';
 import { RunProgress } from './components/RunProgress';
 import { StateLayer } from './components/StateLayer';
 import { Welcome } from './components/Welcome';
+import { reportToText } from './report-text';
+import { applyScheme, nextScheme, readScheme, type Scheme } from './theme/scheme';
 import type { Report } from './types';
 
 /**
@@ -93,6 +95,7 @@ export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [reachable, setReachable] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [scheme, setScheme] = useState<Scheme>(readScheme);
   const bottom = useRef<HTMLDivElement>(null);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
@@ -106,6 +109,8 @@ export default function App() {
       })
       .catch(() => setReachable(false));
   }, []);
+
+  useEffect(() => applyScheme(scheme), [scheme]);
 
   // Le passage d'une classe de fenêtre à l'autre change la nature du volet :
   // permanent au-dessus de 840 dp, modal en dessous. L'état suit.
@@ -311,6 +316,8 @@ export default function App() {
           closeIfModal();
         }}
         onToggle={() => setDrawerOpen((v) => !v)}
+        scheme={scheme}
+        onCycleScheme={() => setScheme(nextScheme)}
       />
 
       {/* Le voile du volet modal. Il porte la fermeture, donc c'est un bouton :
@@ -423,7 +430,7 @@ function TurnView({ turn, live }: { turn: Turn; live: boolean }) {
                 {paragraph}
               </p>
             ))}
-            <ResponseActions />
+            <ResponseActions copy={() => turn.text ?? ''} />
           </>
         )}
       </AssistantMessage>
@@ -483,6 +490,7 @@ function TurnView({ turn, live }: { turn: Turn; live: boolean }) {
 
       <ResponseActions
         note={`${report.stats.resolvedByRule} entités tranchées par règle, sans recherche facturée · ${report.stats.elapsedS} s`}
+        copy={() => reportToText(report)}
       />
     </AssistantMessage>
   );

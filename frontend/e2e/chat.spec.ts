@@ -18,11 +18,14 @@ test('une amorce lance une vraie passe, et le rapport arrive dans la réponse', 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /commençons/i })).toBeVisible();
 
-  await page.locator('.gl-suggestion').first().click();
-
   // La progression est visible PENDANT la passe : c'est la promesse du flux.
-  await expect(page.locator('md-linear-progress')).toBeVisible();
-  await expect(page.locator('.gl-run-phases li')).not.toHaveCount(0);
+  // L'observation démarre AVANT le clic — sinon le test court après une passe
+  // qui peut se terminer plus vite que lui, et l'échec ne dit rien du produit.
+  const progress = page.waitForSelector('md-linear-progress', { timeout: 30_000 });
+  const phase = page.waitForSelector('.gl-run-phases li', { timeout: 30_000 });
+  await page.locator('.gl-suggestion').first().click();
+  await progress;
+  await phase;
 
   await expect(page.locator('.gl-report')).toBeVisible({ timeout: 120_000 });
 
@@ -123,4 +126,50 @@ test('le volet est modal sur téléphone et permanent au-delà', async ({ page }
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(overflows).toBe(false);
+});
+
+test('le bouton copier met le rapport dans le presse-papiers', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page.locator('.gl-suggestion').first().click();
+  await expect(page.locator('.gl-report')).toBeVisible({ timeout: 120_000 });
+
+  await page.locator('.gl-response-actions button').first().click();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+
+  // Le presse-papiers doit dire la même chose que l'écran : le titre, le
+  // compte, et chaque entité avec son verdict.
+  expect(copied).toContain('GREENLIGHT');
+  expect(copied).toContain('SEVENTEEN MINUTES');
+  expect(copied).toContain('The Black Cat Tavern');
+  expect(copied).toContain('À CHANGER');
+  expect(copied).toContain("ne remplace pas le rapport de clearance");
+});
+
+test('le thème bascule et se souvient', async ({ page }, testInfo) => {
+  await page.goto('/');
+  const root = page.locator('html');
+  const toggle = page.locator('.gl-account .gl-icon-button');
+
+  // Sur téléphone le volet est modal : il faut l'ouvrir pour l'atteindre.
+  const openDrawer = async () => {
+    if (testInfo.project.name === 'phone') await page.locator('.gl-topbar .gl-icon-button').click();
+  };
+  await openDrawer();
+
+  // Système au départ : aucun attribut imposé.
+  await expect(root).not.toHaveAttribute('data-theme', /.*/);
+
+  await toggle.click();
+  await expect(root).toHaveAttribute('data-theme', 'light');
+  await toggle.click();
+  await expect(root).toHaveAttribute('data-theme', 'dark');
+
+  // Le choix survit au rechargement — c'est une préférence, pas un état.
+  await page.reload();
+  await expect(root).toHaveAttribute('data-theme', 'dark');
+
+  await openDrawer();
+  await toggle.click();
+  await expect(root).not.toHaveAttribute('data-theme', /.*/);
 });

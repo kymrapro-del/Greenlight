@@ -1,5 +1,6 @@
 import { Icon } from './Icon';
 import { StateLayer } from './StateLayer';
+import { SCHEME_ICONS, SCHEME_LABELS, type Scheme } from '../theme/scheme';
 
 export interface Thread {
   id: string;
@@ -29,6 +30,8 @@ export function NavDrawer({
   onSelect,
   onNew,
   onToggle,
+  scheme,
+  onCycleScheme,
 }: {
   threads: Thread[];
   activeId: string | null;
@@ -36,6 +39,8 @@ export function NavDrawer({
   onSelect: (id: string) => void;
   onNew: () => void;
   onToggle: () => void;
+  scheme: Scheme;
+  onCycleScheme: () => void;
 }) {
   return (
     <aside className={`gl-drawer ${open ? 'is-open' : 'is-collapsed'}`}>
@@ -94,13 +99,16 @@ export function NavDrawer({
               <span className="gl-body-medium">Kymra</span>
               <span className="gl-body-small gl-account-plan">Pré-clearance</span>
             </span>
+            {/* Trois états, pas deux : « système » n'est pas « clair ». */}
             <button
               type="button"
               className="gl-icon-button gl-state-layer"
-              aria-label="Paramètres"
+              aria-label={SCHEME_LABELS[scheme]}
+              title={SCHEME_LABELS[scheme]}
+              onClick={onCycleScheme}
             >
               <StateLayer />
-              <Icon name="settings" size={18} />
+              <Icon name={SCHEME_ICONS[scheme]} size={18} />
             </button>
           </>
         )}

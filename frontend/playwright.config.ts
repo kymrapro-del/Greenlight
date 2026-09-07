@@ -28,6 +28,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
+  // Une passe complète traverse huit phases sur quatorze scènes : les 30 s par
+  // défaut de Playwright sont en dessous, et le test expire avant le produit.
+  timeout: 120_000,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
 
   use: {

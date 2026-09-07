@@ -41,8 +41,6 @@ const PATHS: Record<string, string> = {
   send: 'M4.5 12 20 4.5l-4 15.5-4.2-6.1z M11.8 13.9 20 4.5',
   expand_more: 'M6.5 9.5 12 15l5.5-5.5',
   expand_less: 'M6.5 14.5 12 9l5.5 5.5',
-  thumb_up: 'M7 10.5v9.5H4.6a1.1 1.1 0 0 1-1.1-1.1v-7.3a1.1 1.1 0 0 1 1.1-1.1zM7 10.5l4.3-7.1a2 2 0 0 1 3.6 1.6l-.9 3.9h4.6a2 2 0 0 1 2 2.4l-1.3 6.2a2 2 0 0 1-2 1.5H7',
-  thumb_down: 'M7 13.5V4H4.6a1.1 1.1 0 0 0-1.1 1.1v7.3a1.1 1.1 0 0 0 1.1 1.1zM7 13.5l4.3 7.1a2 2 0 0 0 3.6-1.6l-.9-3.9h4.6a2 2 0 0 0 2-2.4l-1.3-6.2a2 2 0 0 0-2-1.5H7',
   copy: 'M9 9h9.5v11.5H9zM15 9V4.5H5.5V16H9',
   // Coquille façon Gemini.
   compose: 'M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3M14.5 6.5l3 3',
@@ -50,6 +48,14 @@ const PATHS: Record<string, string> = {
   settings: 'M12 9.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6M19.4 12a7.4 7.4 0 0 0-.1-1.1l1.7-1.3-1.8-3.1-2 .8a7.4 7.4 0 0 0-1.9-1.1L15 4h-3.6l-.3 2.2a7.4 7.4 0 0 0-1.9 1.1l-2-.8-1.8 3.1L6.7 11a7.4 7.4 0 0 0 0 2.2l-1.7 1.3 1.8 3.1 2-.8a7.4 7.4 0 0 0 1.9 1.1l.3 2.1H15l.3-2.1a7.4 7.4 0 0 0 1.9-1.1l2 .8 1.8-3.1-1.7-1.3c.06-.36.1-.73.1-1.1',
   panel: 'M4.5 5.5h15v13h-15zM10 5.5v13',
   search: 'M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14M16 16l4.5 4.5',
+  // Cercle mi-plein — le thème suit le système.
+  contrast: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18M12 3v18',
+  // Soleil — thème clair.
+  light_mode: 'M12 8.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6M12 2.8v2.2M12 19v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.8 12H5M19 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6',
+  // Croissant — thème sombre.
+  dark_mode: 'M20.4 13.4A8.6 8.6 0 0 1 10.6 3.6a8.6 8.6 0 1 0 9.8 9.8',
+  // Coche seule — l'action a réussi.
+  done: 'M4.8 12.6 9.6 17.4 19.2 6.6',
   // Cercle plein aux trois quarts — une phase en cours.
   pending: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18M8.4 12h.01M12 12h.01M15.6 12h.01',
   // Croix cerclée — la passe a échoué.

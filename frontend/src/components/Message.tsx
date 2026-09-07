@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { Icon } from './Icon';
 import { StateLayer } from './StateLayer';
@@ -48,27 +48,44 @@ export function AssistantMessage({
   );
 }
 
-/** Les actions sous une réponse, comme la barre d'icônes de Gemini. */
-export function ResponseActions({ note }: { note?: string }) {
+/**
+ * Les actions sous une réponse.
+ *
+ * Une seule, et elle marche. La barre d'icônes de Gemini porte aussi deux
+ * pouces ; ils n'avaient ici nulle part où envoyer un avis, et un bouton qui ne
+ * fait rien est pire qu'un bouton absent — le premier visiteur clique dessus.
+ *
+ * Copier, en revanche, est exactement ce qu'on veut faire d'un rapport de
+ * clearance : le coller dans un mail au producteur.
+ */
+export function ResponseActions({ note, copy }: { note?: string; copy?: () => string }) {
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    if (!copy) return;
+    try {
+      await navigator.clipboard.writeText(copy());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Presse-papiers refusé (contexte non sécurisé, permission) : ne rien
+      // afficher de faux. Le bouton reste dans son état initial.
+    }
+  };
+
   return (
     <div className="gl-response-actions">
-      {(['thumb_up', 'thumb_down', 'copy'] as const).map((name) => (
+      {copy && (
         <button
-          key={name}
           type="button"
           className="gl-icon-button gl-state-layer"
-          aria-label={
-            name === 'thumb_up'
-              ? 'Bonne réponse'
-              : name === 'thumb_down'
-                ? 'Mauvaise réponse'
-                : 'Copier'
-          }
+          aria-label={copied ? 'Copié' : 'Copier'}
+          onClick={onCopy}
         >
           <StateLayer />
-          <Icon name={name} size={18} />
+          <Icon name={copied ? 'done' : 'copy'} size={18} />
         </button>
-      ))}
+      )}
       {note && <span className="gl-body-small gl-response-note">{note}</span>}
     </div>
   );
